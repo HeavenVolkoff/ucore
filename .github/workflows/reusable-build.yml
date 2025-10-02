@@ -127,9 +127,6 @@ jobs:
         architecture: ${{ fromJson(inputs.architecture) }}
 
     steps:
-      - name: Disable AppArmor
-        uses: &apparmor cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1
-
       - name: Checkout Push to Registry action
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
@@ -171,6 +168,7 @@ jobs:
 
           curl -fsSL# "https://github.com/mgoltzsche/podman-static/releases/latest/download/podman-linux-${IMAGE_ARCH}.tar.gz" | sudo tar --strip-component 1 -xzf - -C /
           curl -fsSL# "https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin
+          sudo sed -Ei 's!^profile podman /usr/bin/podman !profile podman /usr/{bin,local/bin}/podman !' /etc/apparmor.d/podman
 
       - name: Download stream info artifact
         uses: &download actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
@@ -307,9 +305,6 @@ jobs:
         image_suffix: *image_suffix
         include: *include
     steps:
-      - name: Disable AppArmor
-        uses: *apparmor
-
       - name: Update Podman and Buildah
         shell: bash
         run: *buildah
