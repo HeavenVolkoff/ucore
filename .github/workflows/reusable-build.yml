@@ -141,7 +141,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          IMAGE_NAME=ucore${{ matrix.image_suffix }}
+          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
 
@@ -209,7 +209,7 @@ jobs:
             ./ucore/Containerfile
           context: ./ucore
           image: ${{ env.IMAGE_NAME }}
-          tags: temp-build
+          tags: ${{ matrix.architecture }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
@@ -230,9 +230,13 @@ jobs:
             sudo apt update
             sudo apt install sbsigntool curl openssl
           fi
-          podman run -d --rm --name ${{env.IMAGE_NAME }}-temp-build "${{ env.IMAGE_NAME }}":temp-build sleep 1000
-          podman cp ${{env.IMAGE_NAME }}-temp-build:/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
-          podman rm -f ${{env.IMAGE_NAME }}-temp-build
+
+          IMAGE_TAG='${{ matrix.architecture }}'
+          IMAGE_NAME='${{env.IMAGE_NAME }}'
+
+          podman run -d --rm --name "${IMAGE_NAME}-${IMAGE_TAG}" "${IMAGE_NAME}:${IMAGE_TAG}" sleep 1000
+          podman cp "${IMAGE_NAME}-${IMAGE_TAG}":/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
+          podman rm -f "${IMAGE_NAME}-${IMAGE_TAG}"
           sbverify --list vmlinuz
           curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
           curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
@@ -269,6 +273,46 @@ jobs:
           path: images/
           merge-multiple: true # This places all matching artifacts into the 'path' directory
 
+      - name: Create Manifest
+        id: create_manifest
+        shell: bash
+        run: |
+          set -eux
+
+          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
+
+          echo "Creating manifest for ${IMAGE_NAME}"
+          buildah manifest create ${IMAGE_NAME}:latest
+
+          # Add each architecture's image from the downloaded OCI files to the manifest
+          for img in images/ucore-*.tar
+          do
+              echo "Adding ${img} to manifest"
+
+              case "$img" in
+                *-x86_64.tar)
+                  IMG_TAG='x86_64'
+                  IMG_ARCH='amd64'
+                  ;;
+                *-aarch64.tar)
+                  IMG_TAG='aarch64"
+                  IMG_ARCH='arm64"
+                  ;;
+                *)
+                  printf "Invalid architecture" >&2
+                  exit 1
+                  ;;
+              esac
+              
+              buildah pull --arch="$IMG_ARCH" docker-archive:${img}
+              buildah manifest add "${IMAGE_NAME}:latest" "docker://${IMAGE_NAME}:${IMG_TAG}"
+          done
+
+          echo "Final manifest contents:"
+          buildah manifest inspect ${IMAGE_NAME}
+
+          echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+
       - name: Generate tags
         id: generate-tags
         shell: bash
@@ -291,10 +335,12 @@ jobs:
           BUILD_TAGS+=("${COREOS_VERSION}-zfs")
           BUILD_TAGS+=("${COREOS_VERSION}-zfs-${TIMESTAMP}")
 
+          IMAGE_NAME='${{ steps.create_manifest.outputs.image }}'
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
               for TAG in "${COMMIT_TAGS[@]}"; do
                   echo "${TAG}"
+                  buildah tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${TAG}"
               done
 
               alias_tags=("${COMMIT_TAGS[@]}")
@@ -303,13 +349,14 @@ jobs:
                   BUILD_TAGS+=("latest")
               fi
 
+                echo "Generated the following build tags: "
+                for TAG in "${BUILD_TAGS[@]}"; do
+                    echo "${TAG}"
+                    buildah tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${TAG}"
+                done
+
               alias_tags=("${BUILD_TAGS[@]}")
           fi
-
-          echo "Generated the following build tags: "
-          for TAG in "${BUILD_TAGS[@]}"; do
-              echo "${TAG}"
-          done
 
           echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
 
@@ -320,29 +367,6 @@ jobs:
         uses: ASzc/change-string-case-action@d0603cd0a7dd490be678164909f65c7737470a7f # v6
         with:
           string: ${{ env.IMAGE_REGISTRY }}
-
-      - name: Create Manifest
-        id: create_manifest
-        shell: bash
-        run: |
-          set -ex
-
-          IMAGE_NAME="ucore${{ matrix.image_suffix }}"
-
-          echo "Creating manifest for ${IMAGE_NAME}"
-          buildah manifest create ${IMAGE_NAME}
-
-          # Add each architecture's image from the downloaded OCI files to the manifest
-          for img in images/ucore-*.tar
-          do
-              echo "Adding ${img} to manifest"
-              buildah manifest add ${IMAGE_NAME} docker-archive:${img}
-          done
-
-          echo "Final manifest contents:"
-          buildah manifest inspect ${IMAGE_NAME}
-
-          echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
