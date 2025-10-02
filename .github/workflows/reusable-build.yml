@@ -6,6 +6,11 @@ on:
         description: 'The CoreOS stream: stable or testing'
         required: true
         type: string
+      architecture:
+        description: "JSON string of architectures to build, '[aarch64, x86_64]'"
+        default: "['x86_64']"
+        required: false
+        type: string
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
@@ -16,7 +21,7 @@ concurrency:
 jobs:
   workflow_info:
     name: Get Workflow Info
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJson(inputs.architecture) == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
@@ -36,7 +41,7 @@ jobs:
 
   stream_info:
     name: Get Stream Info
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJson(inputs.architecture) == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     outputs:
       fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
       image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
@@ -85,8 +90,8 @@ jobs:
           echo "${{ steps.fetch.outputs.outputs }}"
 
   build_ucore:
-    name: ucore
-    runs-on: ubuntu-24.04
+    name: ucore ${{ matrix.architecture }}
+    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
@@ -107,9 +112,6 @@ jobs:
           - "-minimal"
           - ""
           - "-hci"
-        nvidia_tag:
-          - "-nvidia"
-          - ""
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
@@ -117,6 +119,7 @@ jobs:
             description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
+        architecture: ${{ fromJson(inputs.architecture) }}
 
     steps:
       # Checkout push-to-registry action GitHub repository
@@ -141,7 +144,6 @@ jobs:
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
 
@@ -174,25 +176,13 @@ jobs:
               exit 1
           fi
 
-      - name: Verify versions (nvidia)
-        if: matrix.nvidia_tag == '-nvidia'
-        shell: bash
-        run: |
-          set -x
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
-              exit 1
-          fi
-
       - name: Generate tags
         id: generate-tags
         shell: bash
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}"
+          COREOS_VERSION="${{ inputs.coreos_version }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -262,7 +252,6 @@ jobs:
             IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
             KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
             PR_PREFIX=${{ env.PR_PREFIX }}
-            NVIDIA_TAG=${{ matrix.nvidia_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
