@@ -285,7 +285,7 @@ jobs:
 
           for IMAGE in images/ucore-*.tar; do
               IMAGE_ARCH="${IMAGE#images/ucore-}"
-              IMAGE_ARCH="${IMAGE_TAG%.tar}"
+              IMAGE_ARCH="${IMAGE_ARCH%.tar}"
               IMAGE_TAGS+=("$IMAGE_ARCH")
 
               buildah pull --arch="$IMAGE_ARCH" "docker-archive:${IMAGE}"
