@@ -280,24 +280,13 @@ jobs:
         run: |
           set -euxo pipefail
 
-          IMAGE_NAME='ucore-hci'
-          declare -A IMAGE_TAGS=()
+          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
+          IMAGE_TAGS=()
 
           for IMAGE in images/ucore-*.tar; do
-              case "$IMAGE" in
-                *-x86_64.tar)
-                  IMAGE_ARCH='x86_64'
-                  IMAGE_TAGS[$IMAGE_ARCH]='amd64'
-                  ;;
-                *-aarch64.tar)
-                  IMAGE_ARCH='aarch64'
-                  IMAGE_TAGS[$IMAGE_ARCH]='arm64'
-                  ;;
-                *)
-                  printf "Invalid architecture" >&2
-                  exit 1
-                  ;;
-              esac
+              IMAGE_ARCH="${IMAGE#images/ucore-}"
+              IMAGE_ARCH="${IMAGE_TAG%.tar}"
+              IMAGE_TAGS+=("$IMAGE_ARCH")
 
               buildah pull --arch="$IMAGE_ARCH" "docker-archive:${IMAGE}"
           done
@@ -305,8 +294,8 @@ jobs:
           echo "Creating manifest for $IMAGE_NAME"
           buildah manifest create "${IMAGE_NAME}:latest"
 
-          for IMAGE_TAG in "${!IMAGE_TAGS[@]}"; do
-            IMAGE="${IMAGE_NAME}:${IMAGE_TAGS[$IMAGE_TAG]}"
+          for IMAGE_TAG in "${IMAGE_TAGS[@]}"; do
+            IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
             echo "Adding ${IMAGE} to manifest"
             buildah manifest add "${IMAGE_NAME}:latest" "$IMAGE"
           done
