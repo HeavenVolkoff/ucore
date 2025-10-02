@@ -149,16 +149,7 @@ jobs:
           esac
 
           # Remove snap
-          sudo systemctl disable snapd
-          sudo systemctl disable snapd.service
-          sudo systemctl disable snapd.socket
-          sudo systemctl disable snapd.seeded.service
-          
-          # cant figure out how to get the snap removeal to unmount tis read only drive.
           sudo apt remove -yq --purge firefox
-          sudo umount /var/snap/firefox/common/host-hunspell
-          
-          # brutish but snap does not seem to make this easy when snaps depend on each other.
           while [ -n "$(snap list | awk '!/^Name/ {print $1}')" ]
           do
               SNAPS=( $(snap list | awk '!/^Name/ {print $1}') )
@@ -168,13 +159,13 @@ jobs:
                   sudo snap remove --purge "$s"
               done
           done;
-          
+
           sudo rm -rf /etc/systemd/system/snapd.mounts.target.wants
-          
+
           sudo apt-get remove -yq --purge snapd crun buildah podman
 
           sudo rm -rf /var/cache/snapd/ /var/snap/
-          
+
           sudo apt-get update -yq
           sudo apt-get upgrade -yq
 
@@ -371,7 +362,7 @@ jobs:
           done
 
           echo "Creating manifest for $IMAGE_NAME"
-          buildah manifest create --annotation="$(echo '${{ steps.meta.outputs.annotations }}' | awk -F':' '{ print $2 }' | head -c -1 | tr '\n' ',')" "${IMAGE_NAME}:latest"
+          buildah manifest create --annotation="$(echo '${{ steps.meta.outputs.labels }}' | awk -F':' '{ print $2 }' | head -c -1 | tr '\n' ',')" "${IMAGE_NAME}:latest"
 
           for IMAGE_TAG in "${IMAGE_TAGS[@]}"; do
             IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
