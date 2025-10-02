@@ -21,7 +21,7 @@ concurrency:
 jobs:
   workflow_info:
     name: Get Workflow Info
-    runs-on: ${{ fromJson(inputs.architecture) == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    runs-on: ubuntu-24.04
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
@@ -41,11 +41,11 @@ jobs:
 
   stream_info:
     name: Get Stream Info
-    runs-on: ${{ fromJson(inputs.architecture) == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
-    outputs:
-      fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
-      image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
-      kernel: ${{ fromJSON(steps.fetch.outputs.outputs).kernel}}
+    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: ${{ fromJson(inputs.architecture) }}
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
@@ -86,8 +86,23 @@ jobs:
             echo "image=$image" >> $GITHUB_OUTPUT
             echo "fedora=$fedora" >> $GITHUB_OUTPUT
       - name: Echo outputs
+        env:
+          FEDORA_VER: ${{ steps.fetch.outputs.fedora }}
+          IMAGE_VER: ${{ steps.fetch.outputs.image }}
+          KERNEL_VER: ${{ steps.fetch.outputs.kernel }}
         run: |
           echo "${{ steps.fetch.outputs.outputs }}"
+          echo "FEDORA=${FEDORA_VER}" > stream-info.env
+          echo "IMAGE=${IMAGE_VER}" >> stream-info.env
+          echo "KERNEL=${KERNEL_VER}" >> stream-info.env
+          cat stream-info.env
+      - name: Upload stream info as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-info-${{ matrix.architecture }}
+          path: |
+            stream-info.env
+          retention-days: 1
 
   build_ucore:
     name: ucore ${{ matrix.architecture }}
@@ -99,10 +114,7 @@ jobs:
       packages: write
       id-token: write
     env:
-      FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
-      IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
       KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
-      KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
       PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
 
     strategy:
@@ -122,9 +134,14 @@ jobs:
         architecture: ${{ fromJson(inputs.architecture) }}
 
     steps:
-      # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Download stream info artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stream-info-${{ matrix.architecture }}
+          path: .
 
       # sent env variables which depend on the matrix
       - name: Matrix variables
@@ -133,6 +150,7 @@ jobs:
           set -x
           IMAGE_NAME=ucore${{ matrix.image_suffix }}
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          cat stream-info.env >> $GITHUB_ENV
 
       - name: Pull base and kmod images
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
