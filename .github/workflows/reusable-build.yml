@@ -116,8 +116,8 @@ jobs:
       fail-fast: false
       matrix:
         image_suffix:
-          - "-minimal"
-          - ""
+          # - "-minimal"
+          # - ""
           - "-hci"
         include:
           - image_suffix: "-minimal"
