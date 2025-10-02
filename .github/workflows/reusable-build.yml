@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: &wretry Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -92,7 +92,7 @@ jobs:
           echo "KERNEL_VERSION=${{ env.kernel }}" >> stream-info.env
           cat stream-info.env
       - name: Upload stream info as artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: &upload actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: stream-info-${{ matrix.architecture }}
           path: |
@@ -131,7 +131,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Download stream info artifact
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        uses: &download actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: stream-info-${{ matrix.architecture }}
           path: .
@@ -146,7 +146,7 @@ jobs:
           cat stream-info.env >> $GITHUB_ENV
 
       - name: Pull base and kmod images
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: *wretry
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -186,20 +186,6 @@ jobs:
               exit 1
           fi
 
-      # Build metadata
-      - name: Image Metadata
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
-        id: meta
-        with:
-          images: |
-            ${{ env.IMAGE_NAME }}
-          labels: |
-            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
-            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
-            org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
-            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
-
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -231,7 +217,7 @@ jobs:
           fi
 
           IMAGE_TAG='${{ matrix.architecture }}'
-          IMAGE_NAME='${{env.IMAGE_NAME }}'
+          IMAGE_NAME='${{ env.IMAGE_NAME }}'
 
           podman run -d --rm --name "${IMAGE_NAME}-${IMAGE_TAG}" "${IMAGE_NAME}:${IMAGE_TAG}" sleep 1000
           podman cp "${IMAGE_NAME}-${IMAGE_TAG}":/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
@@ -247,7 +233,7 @@ jobs:
           buildah push "${IMAGE_NAME}:${IMAGE_TAG}" docker-archive:ucore-${{ matrix.architecture }}.tar
 
       - name: Upload Image Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: *upload
         with:
           name: image${{ matrix.image_suffix }}-${{ matrix.architecture }}
           path: ucore-${{ matrix.architecture }}.tar
@@ -266,13 +252,28 @@ jobs:
       matrix:
         image_suffix: *image_suffix
     steps:
+      - name: Download stream info artifact
+        uses: *download
+        with:
+          name: stream-info-${{ matrix.architecture }}
+          path: .
+
       - name: Download all image artifacts for variant ucore${{ matrix.image_suffix }}
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        uses: *download
         with:
           # Download all artifacts that match this pattern into a directory
           pattern: image${{ matrix.image_suffix }}-*
           path: images/
           merge-multiple: true # This places all matching artifacts into the 'path' directory
+
+      # sent env variables which depend on the matrix
+      - name: Matrix variables
+        shell: bash
+        run: |
+          set -x
+          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          cat stream-info.env >> $GITHUB_ENV
 
       - name: Create Manifest
         id: create_manifest
@@ -280,7 +281,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
+          IMAGE_NAME='${{ env.IMAGE_NAME }}'
           IMAGE_TAGS=()
 
           for IMAGE in images/ucore-*.tar; do
@@ -303,7 +304,19 @@ jobs:
           echo 'Final manifest contents:'
           buildah manifest inspect "$IMAGE_NAME"
 
-          echo "image=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+      # Build metadata
+      - name: Image Metadata
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        id: meta
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          labels: |
+            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       - name: Generate tags
         id: generate-tags
@@ -329,7 +342,7 @@ jobs:
           BUILD_TAGS+=("${COREOS_VERSION}-zfs")
           BUILD_TAGS+=("${COREOS_VERSION}-zfs-${TIMESTAMP}")
 
-          IMAGE_NAME='${{ steps.create_manifest.outputs.image }}'
+          IMAGE_NAME='${{ env.IMAGE_NAME }}'
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
               for TAG in "${COMMIT_TAGS[@]}"; do
@@ -365,7 +378,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: *wretry
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -376,7 +389,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 15000
           with: |
-            image: ${{ steps.create_manifest.outputs.image }}
+            image: ${{ env.IMAGE_NAME }}
             tags: ${{ steps.generate-tags.outputs.alias_tags }}
             registry: ${{ steps.registry_case.outputs.lowercase }}
             username: ${{ env.REGISTRY_USER }}
@@ -397,7 +410,7 @@ jobs:
       - name: Sign container image
         if: github.event_name != 'pull_request'
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.create_manifest.outputs.image }}@${TAGS}
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ env.IMAGE_NAME }}@${TAGS}
         env:
           TAGS: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
