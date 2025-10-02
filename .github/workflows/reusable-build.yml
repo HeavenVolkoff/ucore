@@ -82,9 +82,9 @@ jobs:
             fi
 
 
-            echo "kernel=$kernel" >> $GITHUB_OUTPUT
-            echo "image=$image" >> $GITHUB_OUTPUT
-            echo "fedora=$fedora" >> $GITHUB_OUTPUT
+            echo "kernel=$kernel" >> $GITHUB_ENV
+            echo "image=$image" >> $GITHUB_ENV
+            echo "fedora=$fedora" >> $GITHUB_ENV
       - name: Echo outputs
         run: |
           echo "FEDORA=${{ env.fedora }}" > stream-info.env
