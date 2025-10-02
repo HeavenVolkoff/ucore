@@ -308,7 +308,7 @@ jobs:
           for IMAGE_TAG in "${!IMAGE_TAGS[@]}"; do
             IMAGE="${IMAGE_NAME}:${IMAGE_TAGS[$IMAGE_TAG]}"
             echo "Adding ${IMAGE} to manifest"
-            buildah manifest add "${IMAGE_NAME}:latest" "docker://${IMAGE}"
+            buildah manifest add "${IMAGE_NAME}:latest" "$IMAGE"
           done
 
           echo 'Final manifest contents:'
