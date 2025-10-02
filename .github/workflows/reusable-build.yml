@@ -158,7 +158,6 @@ jobs:
             podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
             podman pull ghcr.io/ublue-os/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ghcr.io/ublue-os/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
-            podman pull ghcr.io/ublue-os/config:latest
 
       - name: Verify versions (image, kernel, zfs)
         shell: bash
