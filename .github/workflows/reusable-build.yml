@@ -220,9 +220,8 @@ jobs:
           oci: false
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
-            --output=type=tar,dest=ucore-${{ matrix.architecture }}.tar
 
-      - name: Check Secureboot
+      - name: Check Secureboot and Export
         shell: bash
         run: |
           set -euxo pipefail
@@ -244,6 +243,8 @@ jobs:
           openssl x509 -in akmods.der -out akmods.crt
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
+
+          buildah push "${IMAGE_NAME}:${IMAGE_TAG}" docker-archive:ucore-${{ matrix.architecture }}.tar
 
       - name: Upload Image Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
