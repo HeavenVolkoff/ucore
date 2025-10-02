@@ -28,7 +28,7 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 rm -rf /tmp/cockpit-zfs-manager*
 
 # install packages direct from github
-/ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.x86_64"
+/ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.$(uname -m)"
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
