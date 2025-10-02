@@ -345,15 +345,16 @@ jobs:
 
               alias_tags=("${COMMIT_TAGS[@]}")
           else
+              echo "Generated the following build tags: "
+              for TAG in "${BUILD_TAGS[@]}"; do
+                  echo "${TAG}"
+                  buildah tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${TAG}"
+              done
+                
               if [[ "${COREOS_VERSION}" == "stable" ]]; then
+                  echo "latest"
                   BUILD_TAGS+=("latest")
               fi
-
-                echo "Generated the following build tags: "
-                for TAG in "${BUILD_TAGS[@]}"; do
-                    echo "${TAG}"
-                    buildah tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${TAG}"
-                done
 
               alias_tags=("${BUILD_TAGS[@]}")
           fi
