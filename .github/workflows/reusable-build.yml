@@ -355,7 +355,7 @@ jobs:
           done
 
           echo "Creating manifest for $IMAGE_NAME"
-          buildah manifest create --annotation="$(echo '${{ steps.meta.outputs.labels }}' | awk -F':' '{ print $2 }' | head -c -1 | tr '\n' ',')" "${IMAGE_NAME}:latest"
+          buildah manifest create --annotation="$(echo '${{ steps.meta.outputs.labels }}' | head -c -1 | tr '\n' ',')" "${IMAGE_NAME}:latest"
 
           for IMAGE_TAG in "${IMAGE_TAGS[@]}"; do
             IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
