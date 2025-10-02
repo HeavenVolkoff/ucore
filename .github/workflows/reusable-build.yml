@@ -285,12 +285,12 @@ jobs:
           for IMAGE in images/ucore-*.tar; do
               case "$IMAGE" in
                 *-x86_64.tar)
-                  IMAGE_TAG='x86_64'
-                  IMAGE_TAGS[$IMAGE_TAG]='amd64'
+                  IMAGE_ARCH='x86_64'
+                  IMAGE_TAGS[$IMAGE_ARCH]='amd64'
                   ;;
                 *-aarch64.tar)
-                  IMAGE_TAG='aarch64'
-                  IMAGE_TAGS[$IMAGE_TAG]='arm64'
+                  IMAGE_ARCH='aarch64'
+                  IMAGE_TAGS[$IMAGE_ARCH]='arm64'
                   ;;
                 *)
                   printf "Invalid architecture" >&2
@@ -298,7 +298,7 @@ jobs:
                   ;;
               esac
 
-              buildah pull --arch="$IMG_ARCH" "docker-archive:${IMAGE}"
+              buildah pull --arch="$IMAGE_ARCH" "docker-archive:${IMAGE}"
           done
 
           echo "Creating manifest for $IMAGE_NAME"
