@@ -152,10 +152,8 @@ jobs:
 
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-          curl -fsSL# "https://github.com/mgoltzsche/podman-static/releases/latest/download/podman-linux-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /
+          curl -fsSL# "https://github.com/mgoltzsche/podman-static/releases/latest/download/podman-linux-${IMAGE_ARCH}.tar.gz" | sudo tar --strip-component 1 -xzf - -C /
           curl -fsSL# "https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin
-
-          echo "/usr/local/bin" >> "$GITHUB_PATH"
 
       - name: Download stream info artifact
         uses: &download actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
