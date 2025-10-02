@@ -275,6 +275,20 @@ jobs:
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
 
+      # Build metadata
+      - name: Image Metadata
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        id: meta
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          labels: |
+            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
+
       - name: Create Manifest
         id: create_manifest
         shell: bash
@@ -293,7 +307,7 @@ jobs:
           done
 
           echo "Creating manifest for $IMAGE_NAME"
-          buildah manifest create "${IMAGE_NAME}:latest"
+          buildah manifest create --annotation='${{ steps.meta.outputs.annotations }}' "${IMAGE_NAME}:latest"
 
           for IMAGE_TAG in "${IMAGE_TAGS[@]}"; do
             IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
@@ -303,20 +317,6 @@ jobs:
 
           echo 'Final manifest contents:'
           buildah manifest inspect "$IMAGE_NAME"
-
-      # Build metadata
-      - name: Image Metadata
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
-        id: meta
-        with:
-          images: |
-            ${{ env.IMAGE_NAME }}
-          labels: |
-            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
-            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
-            org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
-            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       - name: Generate tags
         id: generate-tags
