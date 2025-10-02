@@ -148,8 +148,8 @@ jobs:
               ;;
           esac
 
-          sudo apt-get remove -yq --purge buildah
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          curl -fsSL# "https://github.com/mgoltzsche/podman-static/releases/latest/download/podman-linux-${IMAGE_ARCH}.tar.gz" | sudo tar --strip-component 1 -xzf - -C /
           curl -fsSL# "https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin
 
       - name: Download stream info artifact
