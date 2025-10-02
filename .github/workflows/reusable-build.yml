@@ -147,6 +147,10 @@ jobs:
               exit 1
               ;;
           esac
+
+          sudo apt-get purge -yq crun
+          sudo apt-get update -yq
+          sudo apt-get upgrade -yq
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           curl -fsSL# "https://github.com/mgoltzsche/podman-static/releases/latest/download/podman-linux-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /
           curl -fsSL# "https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin
