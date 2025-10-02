@@ -156,9 +156,9 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
+            podman pull ghcr.io/ublue-os/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ghcr.io/ublue-os/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ghcr.io/ublue-os/config:latest
 
       - name: Verify versions (image, kernel, zfs)
         shell: bash
@@ -176,13 +176,13 @@ jobs:
               echo "env.KERNEL_VERSION must not be empty or null"
               exit 1
           fi
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          podman inspect ghcr.io/ublue-os/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          podman inspect ghcr.io/ublue-os/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
@@ -262,7 +262,6 @@ jobs:
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
             IMAGE_VERSION=${{ env.IMAGE_VERSION }}
-            IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
             KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
             PR_PREFIX=${{ env.PR_PREFIX }}
           labels: ${{ steps.meta.outputs.labels }}
