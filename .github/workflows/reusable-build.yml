@@ -148,10 +148,38 @@ jobs:
               ;;
           esac
 
-          sudo apt-get purge -yq crun
+          # Remove snap
+          sudo systemctl disable snapd
+          sudo systemctl disable snapd.service
+          sudo systemctl disable snapd.socket
+          sudo systemctl disable snapd.seeded.service
+          
+          # cant figure out how to get the snap removeal to unmount tis read only drive.
+          sudo apt remove -yq --purge firefox
+          sudo umount /var/snap/firefox/common/host-hunspell
+          
+          # brutish but snap does not seem to make this easy when snaps depend on each other.
+          while [ -n "$(snap list | awk '!/^Name/ {print $1}')" ]
+          do
+              SNAPS=( $(snap list | awk '!/^Name/ {print $1}') )
+              for s in "${SNAPS[@]}"
+              do
+                  sudo snap disable "$s"
+                  sudo snap remove --purge "$s"
+              done
+          done;
+          
+          sudo rm -rf /etc/systemd/system/snapd.mounts.target.wants
+          
+          sudo apt-get remove -yq --purge snapd crun buildah podman
+
+          sudo rm -rf /var/cache/snapd/ /var/snap/
+          
           sudo apt-get update -yq
           sudo apt-get upgrade -yq
+
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
           curl -fsSL# "https://github.com/mgoltzsche/podman-static/releases/latest/download/podman-linux-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /
           curl -fsSL# "https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin
 
