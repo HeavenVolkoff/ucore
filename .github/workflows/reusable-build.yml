@@ -280,23 +280,17 @@ jobs:
           set -euxo pipefail
 
           IMAGE_NAME='ucore-hci'
+          declare -A IMAGE_TAGS=()
 
-          echo "Creating manifest for $IMAGE_NAME"
-          buildah manifest create "${IMAGE_NAME}:latest"
-
-          # Add each architecture's image from the downloaded OCI files to the manifest
-          for img in images/ucore-*.tar
-          do
-              echo "Adding ${img} to manifest"
-
-              case "$img" in
+          for IMAGE in images/ucore-*.tar; do
+              case "$IMAGE" in
                 *-x86_64.tar)
-                  IMG_TAG='x86_64'
-                  IMG_ARCH='amd64'
+                  IMAGE_TAG='x86_64'
+                  IMAGE_TAGS[$IMAGE_TAG]='amd64'
                   ;;
                 *-aarch64.tar)
-                  IMG_TAG='aarch64'
-                  IMG_ARCH='arm64'
+                  IMAGE_TAG='aarch64'
+                  IMAGE_TAGS[$IMAGE_TAG]='arm64'
                   ;;
                 *)
                   printf "Invalid architecture" >&2
@@ -304,8 +298,16 @@ jobs:
                   ;;
               esac
 
-              buildah pull --arch="$IMG_ARCH" "docker-archive:${img}"
-              buildah manifest add "${IMAGE_NAME}:latest" "docker://${IMAGE_NAME}:${IMG_TAG}"
+              buildah pull --arch="$IMG_ARCH" "docker-archive:${IMAGE}"
+          done
+
+          echo "Creating manifest for $IMAGE_NAME"
+          buildah manifest create "${IMAGE_NAME}:latest"
+
+          for IMAGE_TAG in "${!IMAGE_TAGS[@]}"; do
+            IMAGE="${IMAGE_NAME}:${IMAGE_TAGS[$IMAGE_TAG]}"
+            echo "Adding ${IMAGE} to manifest"
+            buildah manifest add "${IMAGE_NAME}:latest" "docker://${IMAGE}"
           done
 
           echo 'Final manifest contents:'
