@@ -1,6 +1,7 @@
 {
     "x86_64": {
         "include": {
+            "all": [],
             "ucore-minimal": ["intel-compute-runtime"]
         }
     },
