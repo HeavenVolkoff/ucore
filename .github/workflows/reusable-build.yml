@@ -117,13 +117,6 @@ jobs:
           # - "-minimal"
           # - ""
           - "-hci"
-        include:
-          # - image_suffix: "-minimal"
-          #   description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
-          # - image_suffix: ""
-          #   description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
-          - image_suffix: "-hci"
-            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
         architecture: ${{ fromJson(inputs.architecture) }}
 
     steps:
@@ -251,11 +244,18 @@ jobs:
       fail-fast: false
       matrix:
         image_suffix: *image_suffix
+        include:
+          # - image_suffix: "-minimal"
+          #   description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
+          # - image_suffix: ""
+          #   description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
+          - image_suffix: "-hci"
+            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
       - name: Download stream info artifact
         uses: *download
         with:
-          name: stream-info-${{ matrix.architecture }}
+          name: stream-info-${{ fromJson(inputs.architecture)[0] }}
           path: .
 
       - name: Download all image artifacts for variant ucore${{ matrix.image_suffix }}
