@@ -54,7 +54,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 15000
           command: |
-            set -eo pipefail
+            set -euxo pipefail
 
             skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
 
@@ -160,7 +160,7 @@ jobs:
       - name: Verify versions (image, kernel, zfs)
         shell: bash
         run: |
-          set -x
+          set -euxo pipefail
           if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
               echo "env.FEDORA_VERSION must not be empty or null"
               exit 1
@@ -225,7 +225,7 @@ jobs:
       - name: Check Secureboot
         shell: bash
         run: |
-          set -x
+          set -euxo pipefail
           if [[ ! $(command -v sbverify) || ! $(command -v curl) || ! $(command -v openssl) ]]; then
             sudo apt update
             sudo apt install sbsigntool curl openssl
@@ -277,12 +277,12 @@ jobs:
         id: create_manifest
         shell: bash
         run: |
-          set -eux
+          set -euxo pipefail
 
-          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
+          IMAGE_NAME='ucore-hci'
 
-          echo "Creating manifest for ${IMAGE_NAME}"
-          buildah manifest create ${IMAGE_NAME}:latest
+          echo "Creating manifest for $IMAGE_NAME"
+          buildah manifest create "${IMAGE_NAME}:latest"
 
           # Add each architecture's image from the downloaded OCI files to the manifest
           for img in images/ucore-*.tar
@@ -295,28 +295,30 @@ jobs:
                   IMG_ARCH='amd64'
                   ;;
                 *-aarch64.tar)
-                  IMG_TAG='aarch64"
-                  IMG_ARCH='arm64"
+                  IMG_TAG='aarch64'
+                  IMG_ARCH='arm64'
                   ;;
                 *)
                   printf "Invalid architecture" >&2
                   exit 1
                   ;;
               esac
-              
-              buildah pull --arch="$IMG_ARCH" docker-archive:${img}
+
+              buildah pull --arch="$IMG_ARCH" "docker-archive:${img}"
               buildah manifest add "${IMAGE_NAME}:latest" "docker://${IMAGE_NAME}:${IMG_TAG}"
           done
 
-          echo "Final manifest contents:"
-          buildah manifest inspect ${IMAGE_NAME}
+          echo 'Final manifest contents:'
+          buildah manifest inspect "$IMAGE_NAME"
 
-          echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "image=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Generate tags
         id: generate-tags
         shell: bash
         run: |
+          set -euxo pipefail
+
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
           COREOS_VERSION="${{ inputs.coreos_version }}"
@@ -420,7 +422,7 @@ jobs:
   check:
     name: Check all successful
     runs-on: ubuntu-latest
-    needs: [build_ucore]
+    needs: [push_and_sign]
     steps:
       - name: Exit
         shell: bash
