@@ -87,9 +87,9 @@ jobs:
             echo "fedora=$fedora" >> $GITHUB_ENV
       - name: Echo outputs
         run: |
-          echo "FEDORA=${{ env.fedora }}" > stream-info.env
-          echo "IMAGE=${{ env.image }}" >> stream-info.env
-          echo "KERNEL=${{ env.kernel }}" >> stream-info.env
+          echo "FEDORA_VERSION=${{ env.fedora }}" > stream-info.env
+          echo "IMAGE_VERSION=${{ env.image }}" >> stream-info.env
+          echo "KERNEL_VERSION=${{ env.kernel }}" >> stream-info.env
           cat stream-info.env
       - name: Upload stream info as artifact
         uses: actions/upload-artifact@v4
