@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 set -eoux pipefail
 
@@ -9,5 +9,5 @@ find /var/cache/* -maxdepth 0 -type d \! -name libdnf5 \! -name rpm-ostree -exec
 # this currently fails on /usr/etc and /var/cache
 #bootc container lint
 ostree container commit
-mkdir -p /var/tmp \
-&& chmod -R 1777 /var/tmp
+mkdir -p /var/tmp
+chmod -R 1777 /var/tmp

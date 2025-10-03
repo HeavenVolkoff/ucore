@@ -1,20 +1,23 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -ouex pipefail
 
 ARCH="$(uname -m)"
-RELEASE="$(rpm -E %fedora)"
 
 # build list of all packages requested for exclusion
-EXCLUDED_PACKAGES=($(jq -r "[(.all.exclude | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
-                             (select(.\"$COREOS_VERSION\" != null).\"$COREOS_VERSION\".exclude | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[])] \
-                             | sort | unique[]" /ctx/packages.json))
+mapfile -t EXCLUDED_PACKAGES < <(
+    jq -r "[(.all.exclude | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
+        (select(.\"$COREOS_VERSION\" != null).\"$COREOS_VERSION\".exclude | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[])] \
+        | sort | unique[]" /ctx/packages.json
+)
 
 # build list of all packages requested for inclusion
-INCLUDED_PACKAGES=($(jq -r "[(.all.include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
-                             (select(.\"$COREOS_VERSION\" != null).\"$COREOS_VERSION\".include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
-                             (select(.\"$ARCH\" != null).\"$ARCH\".include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[])] \
-                             | sort | unique[]" /ctx/packages.json))
+mapfile -t INCLUDED_PACKAGES < <(
+    jq -r "[(.all.include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
+        (select(.\"$COREOS_VERSION\" != null).\"$COREOS_VERSION\".include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
+        (select(.\"$ARCH\" != null).\"$ARCH\".include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[])] \
+        | sort | unique[]" /ctx/packages.json
+)
 
 # remove any excluded packages which are present on image before install
 if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
@@ -34,7 +37,7 @@ else
 fi
 
 if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
-    EXCLUDED_PACKAGES=($(rpm -qa --queryformat='%{NAME} ' ${EXCLUDED_PACKAGES[@]}))
+    mapfile -t EXCLUDED_PACKAGES < <(rpm -qa --queryformat='%{NAME} ' "${EXCLUDED_PACKAGES[@]}")
 fi
 
 # remove any excluded packages which are still present on image

@@ -1,8 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -ouex pipefail
-
-RELEASE="$(rpm -E %fedora)"
 
 # install packages.json stuffs
 export IMAGE_NAME=ucore

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 #
 # some paths are not provisioned properly in CoreOS OCI images
 # at least some due to restrictions on paths in /var
@@ -8,10 +8,11 @@
 #
 CONFIG=/etc/systemd/ucore-paths-provision.conf
 
-for MODE_PATH in $(cat $CONFIG|grep -v ^#); do
-    MP=(${MODE_PATH//;/ })
+grep -v '^ *#' "$CONFIG" | while IFS= read -r MODE_PATH; do
+    IFS=";" read -r -a MP <<< "$MODE_PATH"
     if [ ! -d "${MP[1]}" ]; then
-        mkdir -p -m ${MP[0]} ${MP[1]}
-        restorecon -v ${MP[1]}
+        # shellcheck disable=SC2174
+        mkdir -p -m "${MP[0]}" "${MP[1]}"
+        restorecon -v "${MP[1]}"
     fi
 done

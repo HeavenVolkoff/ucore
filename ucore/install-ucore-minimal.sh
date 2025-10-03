@@ -11,14 +11,6 @@ popd
 QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kernel-//')"
 
 #### PREPARE
-# enable testing repos if not enabled on testing stream
-if [[ "testing" == "${COREOS_VERSION}" ]]; then
-    REPO=/etc/yum.repos.d/fedora-updates-testing.repo
-    if [[ "$(grep enabled=1 "$REPO" > /dev/null; echo $?)" == "1" ]]; then
-        echo "enabling $REPO"
-        sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' "$REPO"
-    fi
-fi
 
 # enable ublue-os repos
 dnf -y install dnf5-plugins
