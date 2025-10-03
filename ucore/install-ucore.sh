@@ -27,9 +27,6 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 
 rm -rf /tmp/cockpit-zfs-manager*
 
-# install packages direct from github
-/ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.$(uname -m)"
-
 # disable tuned service by default
 systemctl disable tuned.service
 

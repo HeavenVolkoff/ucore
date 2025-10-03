@@ -142,12 +142,10 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [distrobox](https://github.com/89luca89/distrobox) - a [toolbox](https://containertoolbx.org/) alternative
   - [duperemove](https://github.com/markfasheh/duperemove)
   - all wireless (wifi) card firmwares (CoreOS does not include them) - hardware enablement FTW
-  - [mergerfs](https://github.com/trapexit/mergerfs)
   - nfs-utils - nfs utils including daemon for kernel NFS server
   - [pcp](https://pcp.io) Performance Co-pilot monitoring
   - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
-  - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 - Optional [ZFS versions](#tag-matrix) add:
   - [cockpit-zfs-manager](https://github.com/45Drives/cockpit-zfs-manager) (an interactive ZFS on Linux admin package for Cockpit)
@@ -342,8 +340,6 @@ Users may use [distrobox](https://github.com/89luca89/distrobox) to run images o
 `ucore` includes a few packages geared towards a storage server which will require individual research for configuration:
 
 - [duperemove](https://github.com/markfasheh/duperemove)
-- [mergerfs](https://github.com/trapexit/mergerfs)
-- [snapraid](https://www.snapraid.it/)
 
 But two others are included, which though common, warrant some explanation:
 
