@@ -70,7 +70,10 @@
         },
         "exclude": {
             "all": [],
-            "ucore-minimal": [],
+            "ucore-minimal": [
+                "iscsi-initiator-utils",
+                "iscsi-initiator-utils-iscsiuio"
+            ],
             "ucore": [
                 "nfs-utils-coreos"
             ],
