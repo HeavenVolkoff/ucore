@@ -30,5 +30,8 @@ rm -rf /tmp/cockpit-zfs-manager*
 # install packages direct from github
 /ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.$(uname -m)"
 
+# disable tuned service by default
+systemctl disable tuned.service
+
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
