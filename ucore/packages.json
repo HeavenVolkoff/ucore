@@ -34,6 +34,8 @@
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
+                "glibc-langpack-en",
+                "glibc-langpack-pt",
                 "hdparm",
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
@@ -52,6 +54,9 @@
                 "smartctl",
                 "snapraid",
                 "tiwilink-firmware",
+                "tuned",
+                "tuned-profiles-atomic",
+                "tuned-utils",
                 "usbutils",
                 "xdg-dbus-proxy",
                 "xdg-user-dirs"
