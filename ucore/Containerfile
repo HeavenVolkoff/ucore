@@ -6,7 +6,6 @@ ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos-stable}"
 
 # FROMs for copying
 ARG AKMODS_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 FROM ${AKMODS_COMMON} AS akmods-common
 FROM ${AKMODS_ZFS} AS akmods-zfs
@@ -18,8 +17,6 @@ COPY / /
 FROM quay.io/fedora/fedora-coreos:${IMAGE_VERSION} AS ucore-minimal
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-# build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
-ARG NVIDIA_TAG="${NVIDIA_TAG}"
 
 COPY system_files/etc /etc
 COPY system_files/usr/lib /usr/lib/
@@ -41,7 +38,6 @@ RUN ["bootc", "container", "lint"]
 FROM ucore-minimal AS ucore
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-ARG NVIDIA_TAG="${NVIDIA_TAG}"
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
@@ -55,7 +51,6 @@ RUN ["bootc", "container", "lint"]
 FROM ucore AS ucore-hci
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-ARG NVIDIA_TAG="${NVIDIA_TAG}"
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \

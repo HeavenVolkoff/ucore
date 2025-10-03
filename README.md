@@ -1,7 +1,6 @@
-# uCore <!-- omit in toc -->
+# uCore (HVolkoff Homelab version) <!-- omit in toc -->
 
-[![stable](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml)
-[![testing](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml)
+[![stable](https://github.com/HeavenVolkoff/ucore/actions/workflows/build-stable.yml/badge.svg)](https://github.com/HeavenVolkoff/ucore/actions/workflows/build-stable.yml)
 
 uCore is an OCI image of [Fedora CoreOS](https://getfedora.org/coreos/) with "batteries included". More specifically, it's an opinionated, custom CoreOS image, built daily with some common tools added in. The idea is to make a lightweight server image including commonly used services or the building blocks to host them.
 
@@ -34,54 +33,11 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [NFS](#nfs)
     - [Samba](#samba)
   - [SecureBoot w/ kmods](#secureboot-w-kmods)
-  - [NVIDIA](#nvidia)
-    - [Included Drivers](#included-drivers)
-    - [Other Drivers](#other-drivers)
   - [ZFS](#zfs)
     - [ZFS and immutable root filesystem](#zfs-and-immutable-root-filesystem)
     - [Sanoid/Syncoid](#sanoidsyncoid)
 - [DIY](#diy)
 - [Metrics](#metrics)
-
-## Announcements
-
-### 2025.06.12 - uCore Build Streamlining
-
-In general, the Universal Blue project has been working to streamline various aspects of our builds. In several areas
-this means we've cut back on images which do not have significant use, or otherwise found ways to build fewer images.
-
-For uCore, this means we are dropping builds of `fedora-coreos` images and reducing number of `ucore*` images by
-including ZFS in all `ucore*` images both nvidia and non-nvidia.
-
-Existing tag structure for ZFS specific images will contine to work. The difference is that users running any
-non-ZFS image, ZFS will be available on your system after it next updates.
-
-The team is committed to building and maintaing uCore. For questions about about recent project direction, please
-see our discourse post, [uCore: Streamlining (not retiring)](https://universal-blue.discourse.group/t/ucore-lets-streamline-not-retiring/9098).
-
-### 2025.05.14 - uCore update to Fedora 42
-
-As of today, Fedora CoreOS upstream has updated to kernel 6.14.3 and uCore has unpinned and is building on F42.
-
-### 2025.04.30 - uCore delaying Fedora 42 update
-
-As of today, Fedora CoreOS upstream has updated to Fedora 42 as a base, however it uses kernel 6.14.0 which our
-team has agreed, we don't want to ship. As of April 30, this means uCore has been in an inbetween state. We have some hacks
-in place to pin our builds to the last F41 kernel/release 6.13.8/41.20250331.3.0. This also means that rebase from F42 of
-Fedora CoreOS to F41 of uCore will fail. So in the meantime, if you are attempting to install, use the following installer:
-https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/41.20250331.3.0/x86_64/fedora-coreos-41.20250331.3.0-live.x86_64.iso
-
-### 2024.11.12 - uCore has updated to Fedora 41
-
-As of today our upstream Fedora CoreOS stable image updated to Fedora 41 under the hood, so expect a lot of package updates.
-
-### 2024.11.12 - uCore *stable* has pinned to kernel version *6.11.3*
-
-Kernel version `6.11.3` was the previous *stable* update's kernel, and despite the update to Fedora 41, we've stuck with `6.11.3` rather than updating to `6.11.5` from upstream.
-
-This is due to a kernel bug in versions `6.11.4`/`6.11.5` which [breaks tailscale status reporting](https://github.com/tailscale/tailscale/issues/13863). As many users of uCore do use tailscale, we've decided to be extra cautious and hold back the kernel, even though the rest of stable updated as usual.
-
-We expect the next update of Fedora CoreOS to be on `6.11.6` per the current state of the testing stream. So uCore will follow when that update occurs.
 
 ## Features
 
@@ -96,8 +52,6 @@ The image names are:
 The [tag matrix](#tag-matrix) includes combinations of the following:
 
 - `stable` - images based on Fedora CoreOS stable stream including zfs driver and tools
-- `testing` - images based on Fedora CoreOS testing stream including zfs driver and tools
-- `nvidia` - images which include nvidia driver and container runtime
 
 ### Images
 
@@ -118,14 +72,10 @@ Suitable for running containerized workloads on either bare metal or virtual mac
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series) - [see below](#zfs) for details
   - `pv` is installed with zfs as a complementary tool
-- Optional [nvidia versions](#tag-matrix) add:
-  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver built from negativo17's akmod package
-  - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
-  - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Disables Zincati auto upgrade/reboot service
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
-- Provides public key allowing [SecureBoot](#secureboot) (for ucore signed `nvidia` or `zfs` drivers)
+- Provides public key allowing [SecureBoot](#secureboot) (for ucore signed `zfs` drivers)
 
 > [!IMPORTANT]
 > Per [cockpit's instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
@@ -169,12 +119,10 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 | IMAGE | TAG |
 |-|-|
-| [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia` |
-| [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia` |
-| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia` |
-| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia` |
-| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia` |
-| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia` |
+| [`ucore`](#ucore) - *stable* | `stable` |
+| [`ucore`](#ucore) - *testing* | `testing` |
+| [`ucore-hci`](#ucore-hci) - *stable* | `stable` |
+| [`ucore-hci`](#ucore-hci) - *testing* | `testing` |
 
 ## Installation
 
@@ -193,7 +141,7 @@ There are varying methods of installation for bare metal, cloud providers, and v
 These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by running the following command:
 
 ```bash
-cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
+cosign verify --key https://github.com/HeavenVolkoff/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
 ```
 
 ### Auto-Rebase Install
@@ -471,7 +419,7 @@ sudo systemctl status smb.service
 
 ### SecureBoot w/ kmods
 
-For those wishing to use `nvidia` or `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
+For those wishing to use `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
 
 Do so like this:
 
@@ -480,22 +428,6 @@ sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
 ```
 
 The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the UEFI MOK import utility.
-
-### NVIDIA
-
-#### Included Drivers
-
-If you installed an image with `-nvidia` in the tag, the nvidia kernel module, basic CUDA libraries, and the nvidia-container-toolkit are all are pre-installed.
-
-Note, this does NOT add desktop graphics services to your images, but it DOES enable your compatible nvidia GPU to be used for nvdec, nvenc, CUDA, etc. Since this is CoreOS and it's primarily intended for container workloads the [nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) should be well understood.
-
-The included driver is the [latest nvidia driver](https://github.com/negativo17/nvidia-driver/blob/master/nvidia-driver.spec) as bundled by [negativo17](https://negativo17.org/nvidia-driver/). This package was chosen over rpmfusion's due to it's granular packages which allow us to install just the minimal `nvidia-driver-cuda` packages.
-
-#### Other Drivers
-
-If you need an older (or different) driver, consider looking at the [container-toolkit-fcos driver](https://hub.docker.com/r/fifofonix/driver/). It provides pre-bundled container images with nvidia drivers for FCOS, allowing auto-build/loading of the nvidia driver IN podman, at boot, via a systemd service.
-
-If going this path, you likely won't want to use the `ucore` `-nvidia` image, but would use the suggested systemd service. The nvidia container toolkit will still be required but can by layered easily.
 
 ### ZFS
 

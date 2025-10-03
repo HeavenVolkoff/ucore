@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -ouex pipefail
 
-ARCH="$(rpm -E %{_arch})"
+ARCH="$(rpm -E '%{_arch}')"
 RELEASE="$(rpm -E %fedora)"
 
 pushd /tmp/rpms/kernel
@@ -13,12 +13,11 @@ QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kerne
 #### PREPARE
 # enable testing repos if not enabled on testing stream
 if [[ "testing" == "${COREOS_VERSION}" ]]; then
-for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing.repo); do
-  if [[ "$(grep enabled=1 ${REPO} > /dev/null; echo $?)" == "1" ]]; then
-    echo "enabling $REPO" &&
-    sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' ${REPO}
-  fi
-done
+    REPO=/etc/yum.repos.d/fedora-updates-testing.repo
+    if [[ "$(grep enabled=1 "$REPO" > /dev/null; echo $?)" == "1" ]]; then
+        echo "enabling $REPO"
+        sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' "$REPO"
+    fi
 fi
 
 # enable ublue-os repos
@@ -64,21 +63,7 @@ fi
 ## ALWAYS: install ZFS (and sanoid deps)
 dnf -y install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
 # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
-depmod -a -v ${KERNEL_VERSION}
-
-## CONDITIONAL: install NVIDIA
-if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
-    # repo for nvidia rpms
-    curl --fail --retry 15 --retry-all-errors -sSL https://negativo17.org/repos/fedora-nvidia.repo -o /etc/yum.repos.d/fedora-nvidia.repo
-
-    dnf -y install /tmp/rpms/akmods-nvidia/ucore/ublue-os-ucore-nvidia*.rpm
-    sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' /etc/yum.repos.d/nvidia-container-toolkit.repo
-
-    dnf -y install \
-        /tmp/rpms/akmods-nvidia/kmods/kmod-nvidia*.rpm \
-        nvidia-driver-cuda \
-        nvidia-container-toolkit
-fi
+depmod -a -v "${KERNEL_VERSION}"
 
 ## ALWAYS: install regular packages
 
