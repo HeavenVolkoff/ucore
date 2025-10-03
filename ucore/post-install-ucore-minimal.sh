@@ -4,7 +4,6 @@ set -ouex pipefail
 
 ## ALWAYS: regular post-install
 systemctl disable coreos-oci-migration-motd.service
-systemctl disable docker.socket
 systemctl disable zincati.service
 
 systemctl enable gssproxy-workaround.service

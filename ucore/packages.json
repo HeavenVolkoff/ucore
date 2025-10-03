@@ -14,8 +14,6 @@
                 "cockpit-podman",
                 "cockpit-selinux",
                 "cockpit-system",
-                "docker-buildx",
-                "docker-compose",
                 "firewalld",
                 "fwupd-efi",
                 "open-vm-tools",
@@ -71,6 +69,8 @@
         "exclude": {
             "all": [],
             "ucore-minimal": [
+                "moby-engine",
+                "moby-filesystem",
                 "iscsi-initiator-utils",
                 "iscsi-initiator-utils-iscsiuio"
             ],
