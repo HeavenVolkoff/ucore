@@ -271,14 +271,12 @@ jobs:
       - name: Checkout repository
         uses: *checkout
       - name: Restore image artifact x86_64
-        id: cache
         uses: *restore
         with:
           path: ucore-x86_64.tar
           key: ucore${{ matrix.image_suffix }}-x86_64-${{ hashFiles('ucore/**/*') }}
           fail-on-cache-miss: true
       - name: Restore image artifact aarch64
-        id: cache
         uses: *restore
         with:
           path: ucore-aarch64.tar
