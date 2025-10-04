@@ -246,7 +246,7 @@ jobs:
           openssl x509 -in akmods.der -out akmods.crt
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
-
+          rm -f ucore-${{ matrix.architecture }}.tar
           buildah push "${IMAGE_NAME}:${IMAGE_TAG}" docker-archive:ucore-${{ matrix.architecture }}.tar
       - name: Cache image artifact
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
