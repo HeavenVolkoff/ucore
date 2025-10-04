@@ -18,6 +18,10 @@ env:
   ZSTD_NBTHREADS: 0
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
   cancel-in-progress: true
@@ -26,12 +30,17 @@ jobs:
   workflow_info:
     name: Get workflow info
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     outputs:
+      date: ${{ steps.date.outputs.date }}
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
-      - name: Set PR prefix
-        id: pr_prefix
-        shell: bash
+      - id: date
+        name: Get current date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+      - id: pr_prefix
+        name: Set PR prefix
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               PR_PREFIX="pr-${{ github.event.number }}-"
@@ -41,62 +50,61 @@ jobs:
           echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
+          echo "${{ toJSON(steps.date.outputs) }}"
           echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
   stream_info:
     name: Get stream Info
     runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    permissions:
+      actions: write # for upload-artifact
     strategy:
       fail-fast: false
       matrix:
         architecture: &architecture ${{ fromJson(inputs.architecture) }}
     steps:
-      - name: Fetch CoreOS stream versions
-        id: fetch
+      - id: fetch
+        name: Fetch CoreOS stream versions
         uses: &wretry Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
           command: |
-            set -euxo pipefail
+            set -euo pipefail
 
-            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
+            skopeo inspect 'docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}' > inspect.json
 
             image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
             if [ -z "$image" ] || [ "null" = "$image" ]; then
-                echo "inspected image version must not be empty or null"
-                exit 1
+              echo "inspected image version must not be empty or null" >&2
+              exit 1
             fi
 
-            if [[ "${image}" =~ "42.20250410.3" ]]; then
-                echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0"
-                image="41.20250331.3.0"
+            if [[ "${image}" == '42.20250410.3.'* ]]; then
+              echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0" >&2
+              image="41.20250331.3.0"
             fi
 
             fedora=$(echo "$image" | cut -f1 -d.)
             if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
-                echo "fedora version must not be empty or null"
-                exit 1
+              echo "fedora version must not be empty or null" >&2
+              exit 1
             fi
 
-            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/akmods:coreos-${{ inputs.coreos_version }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
+            kernel=$(skopeo inspect "docker://ghcr.io/ublue-os/akmods:coreos-${{ inputs.coreos_version }}-${fedora}" \
+              | jq -r '.["Labels"]["ostree.linux"]')
             if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
-                echo "inspected linux (kernel) version must not be empty or null"
-                exit 1
+              echo "inspected linux (kernel) version must not be empty or null" >&2
+              exit 1
             fi
 
+            echo "FEDORA_VERSION=${fedora}" > stream-info.env
+            echo "IMAGE_VERSION=${image}" >> stream-info.env
+            echo "KERNEL_VERSION=${kernel}" >> stream-info.env
 
-            echo "kernel=$kernel" >> $GITHUB_ENV
-            echo "image=$image" >> $GITHUB_ENV
-            echo "fedora=$fedora" >> $GITHUB_ENV
-      - name: Echo outputs
-        run: |
-          echo "FEDORA_VERSION=${{ env.fedora }}" > stream-info.env
-          echo "IMAGE_VERSION=${{ env.image }}" >> stream-info.env
-          echo "KERNEL_VERSION=${{ env.kernel }}" >> stream-info.env
-          cat stream-info.env
+            cat stream-info.env
       - name: Upload stream info as artifact
-        uses: &upload actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: stream-info-${{ matrix.architecture }}
           path: |
@@ -105,24 +113,25 @@ jobs:
 
   build_ucore:
     name: ucore${{ matrix.image_suffix }} ${{ matrix.architecture }}
-    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
+    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     permissions:
-      contents: read
+      contents: read # for actions/checkout
+      actions: write # for actions/cache and actions/download-artifact
     env:
-      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
       PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
+      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
     strategy:
       fail-fast: false
       matrix:
         image_suffix: &image_suffix
-          # - "-minimal"
+        # - "-minimal"
           - ""
           - "-hci"
         include: &include
-          # - image_suffix: "-minimal"
-          #   description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
+        # - image_suffix: "-minimal"
+        #   description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
             description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
           - image_suffix: "-hci"
@@ -131,30 +140,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: &checkout actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - name: Restore cached image
-        id: restore
+      - id: restore
+        name: Restore cached image
         uses: &restore actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: ucore-${{ matrix.architecture }}.tar
-          key: ucore${{ matrix.image_suffix }}-${{ matrix.architecture }}-${{ hashFiles('ucore/**/*') }}
-          restore-keys: ucore${{ matrix.image_suffix }}-${{ matrix.architecture }}-
-      - name: Pull cached image with buildah
-        if: ${{ steps.restore.outputs.cache-matched-key != '' }}
-        shell: bash
-        run: buildah pull --arch="$IMAGE_ARCH" docker-archive:ucore-${{ matrix.architecture }}.tar
+          key: &cache_key ucore${{ matrix.image_suffix }}-${{ matrix.architecture }}-${{ needs.workflow_info.outputs.date }}-${{ hashFiles('ucore/**/*') }}
+          path: &cache_path ucore-${{ matrix.architecture }}.tar
+          lookup-only: true
       - name: Download stream info artifact
+        if: always() && !steps.restore.outputs.cache-hit
         uses: &download actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: stream-info-${{ matrix.architecture }}
           path: .
       - name: Set matrix environment variables
-        shell: bash
-        run: |
-          set -euxo pipefail
-          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+        if: always() && !steps.restore.outputs.cache-hit
+        run: &matrix_envvars |
+          echo 'IMAGE_NAME=ucore${{ matrix.image_suffix }}' >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
       - name: Pull base and kmod images
+        if: always() && !steps.restore.outputs.cache-hit
         uses: *wretry
         with:
           attempt_limit: 3
@@ -162,40 +167,46 @@ jobs:
           command: |
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
-            podman pull ghcr.io/ublue-os/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
-            podman pull ghcr.io/ublue-os/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull "quay.io/fedora/fedora-coreos:${IMAGE_VERSION:?}"
+            podman pull "ghcr.io/ublue-os/akmods:${KERNEL_FLAVOR:?}-${FEDORA_VERSION:?}"
+            podman pull "ghcr.io/ublue-os/akmods-zfs:${KERNEL_FLAVOR:?}-${FEDORA_VERSION:?}"
       - name: Verify versions (image, kernel, zfs)
-        shell: bash
+        if: always() && !steps.restore.outputs.cache-hit
         run: |
-          set -euxo pipefail
-          if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
-              echo "env.FEDORA_VERSION must not be empty or null"
-              exit 1
+          set -euo pipefail
+
+          if [ -z "$FEDORA_VERSION" ] || [ "$FEDORA_VERSION" = "null" ]; then
+            echo "env.FEDORA_VERSION must not be empty or null" >&2
+            exit 1
           fi
-          if [ -z "${{ env.IMAGE_VERSION }}" ] || [ "null" = "${{ env.IMAGE_VERSION }}" ]; then
-              echo "env.IMAGE_VERSION must not be empty or null"
-              exit 1
+
+          if [ -z "$IMAGE_VERSION" ] || [ "$IMAGE_VERSION" = "null" ]; then
+            echo "env.IMAGE_VERSION must not be empty or null" >&2
+            exit 1
           fi
-          if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
-              echo "env.KERNEL_VERSION must not be empty or null"
-              exit 1
+
+          if [ -z "$KERNEL_VERSION" ] || [ "$KERNEL_VERSION" = "null" ]; then
+            echo "env.KERNEL_VERSION must not be empty or null" >&2
+            exit 1
           fi
-          podman inspect ghcr.io/ublue-os/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+
+          podman inspect ghcr.io/ublue-os/akmods:"${KERNEL_FLAVOR:?}-${FEDORA_VERSION}" >inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
-              exit 1
+          if [[ "$KERNEL_VERSION" != "$kernel"* ]]; then
+            echo "pulled akmods image kernel ($kernel) does not match expected kernel (${KERNEL_VERSION})" >&2
+            exit 1
           fi
-          podman inspect ghcr.io/ublue-os/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+
+          podman inspect ghcr.io/ublue-os/akmods-zfs:"${KERNEL_FLAVOR:?}-${FEDORA_VERSION}" >inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
-              exit 1
+          if [[ "$KERNEL_VERSION" != "$kernel"* ]]; then
+            echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${KERNEL_VERSION})" >&2
+            exit 1
           fi
-      - name: Gather image metadata
+      - id: meta
+        if: always() && !steps.restore.outputs.cache-hit
+        name: Gather image metadata
         uses: &metadata_action docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
-        id: meta
         with: &metadata
           images: |
             ${{ env.IMAGE_NAME }}
@@ -205,8 +216,9 @@ jobs:
             org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
-      - name: Build image
-        id: build_image
+      - id: build_image
+        if: always() && !steps.restore.outputs.cache-hit
+        name: Build image
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
         with:
           containerfiles: |
@@ -225,43 +237,54 @@ jobs:
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
       - name: Check secureboot and export
-        shell: bash
+        if: always() && !steps.restore.outputs.cache-hit
+        env:
+          IMAGE_TAG: ${{ matrix.architecture }}
+          IMAGE_ARCH: ${{ matrix.architecture }}
         run: |
-          set -euxo pipefail
+          set -euo pipefail
+
           if [[ ! $(command -v sbverify) || ! $(command -v curl) || ! $(command -v openssl) ]]; then
-            sudo apt update
-            sudo apt install sbsigntool curl openssl
+            echo "Installing sbverify, curl, and openssl"
+            sudo apt-get update -yq
+            sudo apt-get install -yq sbsigntool curl openssl
           fi
 
-          IMAGE_TAG='${{ matrix.architecture }}'
-          IMAGE_NAME='${{ env.IMAGE_NAME }}'
+          echo "Getting vmlinuz from image for secureboot verification"
+          podman create --name "${IMAGE_NAME:?}-${IMAGE_TAG:?}" "${IMAGE_NAME:?}:${IMAGE_TAG:?}"
+          podman cp "${IMAGE_NAME:?}-${IMAGE_TAG:?}":'/usr/lib/modules/${KERNEL_VERSION:?}/vmlinuz' .
+          podman rm "${IMAGE_NAME:?}-${IMAGE_TAG:?}"
 
-          podman create --name "${IMAGE_NAME}-${IMAGE_TAG}" "${IMAGE_NAME}:${IMAGE_TAG}" 
-          podman cp "${IMAGE_NAME}-${IMAGE_TAG}":/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
-          podman rm "${IMAGE_NAME}-${IMAGE_TAG}"
+          echo "vmlinuz secureboot signature:"
           sbverify --list vmlinuz
+
+          echo "Downloading ublue-os kernel signing keys"
           curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
           curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
           openssl x509 -in kernel-sign.der -out kernel-sign.crt
           openssl x509 -in akmods.der -out akmods.crt
+
+          echo "Verifying vmlinuz secureboot signatures"
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
-          rm -f ucore-${{ matrix.architecture }}.tar
-          buildah push "${IMAGE_NAME}:${IMAGE_TAG}" docker-archive:ucore-${{ matrix.architecture }}.tar
+
+          echo "Exporting image to tarball"
+          buildah push "${IMAGE_NAME:?}:${IMAGE_TAG:?}" "docker-archive:ucore-${IMAGE_ARCH:?}.tar"
       - name: Cache image artifact
+        if: always() && !steps.restore.outputs.cache-hit
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: ucore-${{ matrix.architecture }}.tar
-          key: ucore${{ matrix.image_suffix }}-${{ matrix.architecture }}-${{ hashFiles('ucore/**/*') }}
+          key: *cache_key
+          path: *cache_path
 
   push_and_sign:
     name: Push and sign multi-arch ucore${{ matrix.image_suffix }} ${{ matrix.architecture }}
     runs-on: ubuntu-latest
-    needs: [build_ucore]
+    needs: [workflow_info, build_ucore]
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # for actions/checkout
+      packages: write # for pushing to ghcr.io
+      actions: read # for actions/cache and actions/download-artifact
     strategy:
       fail-fast: false
       matrix:
@@ -274,13 +297,13 @@ jobs:
         uses: *restore
         with:
           path: ucore-x86_64.tar
-          key: ucore${{ matrix.image_suffix }}-x86_64-${{ hashFiles('ucore/**/*') }}
+          key: ucore${{ matrix.image_suffix }}-x86_64-${{ needs.workflow_info.outputs.date }}-${{ hashFiles('ucore/**/*') }}
           fail-on-cache-miss: true
       - name: Restore image artifact aarch64
         uses: *restore
         with:
           path: ucore-aarch64.tar
-          key: ucore${{ matrix.image_suffix }}-aarch64-${{ hashFiles('ucore/**/*') }}
+          key: ucore${{ matrix.image_suffix }}-aarch64-${{ needs.workflow_info.outputs.date }}-${{ hashFiles('ucore/**/*') }}
           fail-on-cache-miss: true
       - name: Download stream info artifact
         uses: *download
@@ -288,153 +311,115 @@ jobs:
           name: stream-info-${{ fromJson(inputs.architecture)[0] }}
           path: .
       - name: Set matrix environment variables
-        shell: bash
-        run: |
-          set -euxo pipefail
-          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          cat stream-info.env >> $GITHUB_ENV
-      - name: Set matrix environment variables
+        run: *matrix_envvars
+      - id: meta
+        name: Gather image metadata
         uses: *metadata_action
-        id: meta
         with: *metadata
-      - name: Update Podman and Buildah
-        shell: bash
+      - name: Update Buildah
         run: |
-          set -euxo pipefail
+          set -euo pipefail
+
+          echo "Removing pre-installed buildah"
+          sudo apt-get remove -yq --purge buildah
 
           case "$(uname -m)" in
-            x86_64)
-              IMAGE_ARCH='amd64'
-              ;;
-            aarch64)
-              IMAGE_ARCH='arm64'
-              ;;
-            *)
-              printf "Invalid architecture" >&2
-              exit 1
-              ;;
+            x86_64) IMAGE_ARCH='amd64' ;;
+            aarch64) IMAGE_ARCH='arm64' ;;
+            *) printf "Invalid architecture" >&2; exit 1 ;;
           esac
 
-          # Remove snaps
-          sudo apt remove -yq --purge firefox
-          while [ -n "$(snap list | awk '!/^Name/ {print $1}')" ]
-          do
-              SNAPS=( $(snap list | awk '!/^Name/ {print $1}') )
-              for s in "${SNAPS[@]}"
-              do
-                  sudo snap disable "$s"
-                  sudo snap remove --purge "$s"
-              done
-          done;
-
-          sudo rm -rf /etc/systemd/system/snapd.mounts.target.wants
-
-          sudo apt-get remove -yq --purge \
-            snapd buildah crun podman fuse3 fuse-overlayfs passt
-
-          sudo rm -rf /var/cache/snapd/ /var/snap/
-
-          sudo parallel --xapply \
-            curl -fsSL https://github.com/{2}/{1}-static/releases/latest/download/{1}{3}-${IMAGE_ARCH}.tar.gz \
-              '|' tar --strip-component {4} -xzf - -C {5} \
-            ::: podman buildah ::: mgoltzsche HeavenVolkoff ::: -linux '' ::: 1 0 ::: / /usr/local/bin/
-
-          # Workaround issues between custom podman installation and apparmor
-          sudo sed -Ei \
-            's!^profile podman /usr/bin/podman !profile podman /usr/{bin,local/bin}/podman !' \
-            /etc/apparmor.d/podman
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - name: Create multi-arch manifest
-        id: create_manifest
-        shell: bash
+          echo "Installing up to date buildah for $IMAGE_ARCH"
+          curl -fsSL https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH:?}.tar.gz \
+            | tar -xzf - -C /usr/local/bin/
+      - id: create_manifest
+        name: Create multi-arch manifest
         run: |
-          set -euxo pipefail
+          set -euo pipefail
 
-          IMAGE_NAME='${{ env.IMAGE_NAME }}'
           IMAGE_TAGS=()
-
           for IMAGE in ucore-*.tar; do
-              IMAGE_ARCH="${IMAGE#ucore-}"
-              IMAGE_ARCH="${IMAGE_ARCH%.tar}"
-              IMAGE_TAGS+=("$IMAGE_ARCH")
+            IMAGE_ARCH="${IMAGE#ucore-}"
+            IMAGE_ARCH="${IMAGE_ARCH%.tar}"
+            IMAGE_TAGS+=("${IMAGE_ARCH:?}")
 
-              buildah pull --arch="$IMAGE_ARCH" "docker-archive:${IMAGE}"
+            echo "Importing ${IMAGE:?} for architecture ${IMAGE_ARCH:?}"
+            buildah pull --arch="${IMAGE_ARCH:?}" "docker-archive:${IMAGE:?}"
           done
 
+          echo
           echo "Creating manifest for $IMAGE_NAME"
           buildah manifest create --annotation="$(
             echo '${{ steps.meta.outputs.labels }}' | head -c -1 | tr '\n' ','
-          )" "${IMAGE_NAME}:latest"
+          )" "${IMAGE_NAME:?}:latest"
 
           for IMAGE_TAG in "${IMAGE_TAGS[@]}"; do
-            IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
-            echo "Adding ${IMAGE} to manifest"
-            buildah manifest add "${IMAGE_NAME}:latest" "$IMAGE"
+            IMAGE="${IMAGE_NAME:?}:${IMAGE_TAG:?}"
+            echo "Adding ${IMAGE:?} to manifest"
+            buildah manifest add "${IMAGE_NAME:?}:latest" "$IMAGE"
           done
 
+          echo
           echo 'Final manifest contents:'
-          buildah manifest inspect "$IMAGE_NAME"
-      - name: Generate tags
-        id: generate-tags
-        shell: bash
+          buildah manifest inspect "${IMAGE_NAME:?}"
+      - id: generate-tags
+        name: Generate tags
+        env:
+          # Timestamp for creating an image version history
+          TIMESTAMP: ${{ needs.workflow_info.outputs.date }}
+          COREOS_VERSION: ${{ inputs.coreos_version }}
         run: |
-          set -euxo pipefail
+          set -euo pipefail
 
-          # Generate a timestamp for creating an image version history
-          TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ inputs.coreos_version }}"
-
-          COMMIT_TAGS=()
           BUILD_TAGS=()
+          COMMIT_TAGS=()
 
           # Have tags for tracking builds during pull request
           SHA_SHORT="${GITHUB_SHA::7}"
-          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
-          COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION:?}")
+          COMMIT_TAGS+=("${SHA_SHORT:?}-${COREOS_VERSION:?}")
 
-          BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
+          BUILD_TAGS=("${COREOS_VERSION:?}" "${COREOS_VERSION:?}-${TIMESTAMP:?}")
           # always add the '-zfs' tag to each image since we include ZFS with them all
           # and we want users of the existing '-zfs' images to still get updates
-          BUILD_TAGS+=("${COREOS_VERSION}-zfs")
-          BUILD_TAGS+=("${COREOS_VERSION}-zfs-${TIMESTAMP}")
+          BUILD_TAGS+=("${COREOS_VERSION:?}-zfs")
+          BUILD_TAGS+=("${COREOS_VERSION:?}-zfs-${TIMESTAMP:?}")
 
-          IMAGE_NAME='${{ env.IMAGE_NAME }}'
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              echo "Generated the following commit tags: "
-              for TAG in "${COMMIT_TAGS[@]}"; do
-                  echo "${TAG}"
-                  buildah tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${TAG}"
-              done
+          if [ '${{ github.event_name }}' == "pull_request" ]; then
+            echo "Generated the following commit tags: "
+            for TAG in "${COMMIT_TAGS[@]}"; do
+              echo "${TAG:?}"
+              buildah tag "${IMAGE_NAME:?}:latest" "${IMAGE_NAME:?}:${TAG:?}"
+            done
 
-              alias_tags=("${COMMIT_TAGS[@]}")
+            alias_tags=("${COMMIT_TAGS[@]}")
           else
-              echo "Generated the following build tags: "
-              for TAG in "${BUILD_TAGS[@]}"; do
-                  echo "${TAG}"
-                  buildah tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${TAG}"
-              done
-                
-              if [[ "${COREOS_VERSION}" == "stable" ]]; then
-                  echo "latest"
-                  BUILD_TAGS+=("latest")
-              fi
+            echo "Generated the following build tags: "
+            for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG:?}"
+              buildah tag "${IMAGE_NAME:?}:latest" "${IMAGE_NAME:?}:${TAG:?}"
+            done
+            
+            if [[ "${COREOS_VERSION:?}" == "stable" ]]; then
+              echo "latest"
+              BUILD_TAGS+=("latest")
+            fi
 
-              alias_tags=("${BUILD_TAGS[@]}")
+            alias_tags=("${BUILD_TAGS[@]}")
           fi
 
           echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
-      - name: Lowercase registry
-        id: registry_case
+      - id: registry_case
+        name: Lowercase registry
         uses: ASzc/change-string-case-action@d0603cd0a7dd490be678164909f65c7737470a7f # v6
         with:
           string: ${{ env.IMAGE_REGISTRY }}
-      - name: Push image to GHCR
-        uses: *wretry
-        id: push
+      - id: push
         if: github.event_name != 'pull_request'
+        name: Push image to GHCR
+        uses: *wretry
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
@@ -449,24 +434,24 @@ jobs:
             username: ${{ env.REGISTRY_USER }}
             password: ${{ env.REGISTRY_PASSWORD }}
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         if: github.event_name != 'pull_request'
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cosign
-        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
         if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
       - name: Sign container image
         if: github.event_name != 'pull_request'
-        run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ env.IMAGE_NAME }}@${TAGS}
         env:
           TAGS: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY '${{ steps.registry_case.outputs.lowercase }}'/"${IMAGE_NAME:?}@${TAGS:?}"
       - name: Echo outputs
         if: github.event_name != 'pull_request'
         run: |
@@ -476,12 +461,13 @@ jobs:
     name: Check all successful
     runs-on: ubuntu-latest
     needs: [push_and_sign]
+    permissions: {}
     steps:
       - name: Exit
-        shell: bash
+        env:
+          RESULT: ${{ needs.push_and_sign.result }}
         run: |
-          result="${{ needs.push_and_sign.result }}"
-          if [[ $result == "success" || $result == "skipped" ]]; then
+          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
             exit 0
           else
             exit 1
