@@ -320,9 +320,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Removing pre-installed buildah"
-          sudo apt-get remove -yq --purge buildah
-
           case "$(uname -m)" in
             x86_64) IMAGE_ARCH='amd64' ;;
             aarch64) IMAGE_ARCH='arm64' ;;
