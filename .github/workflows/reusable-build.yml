@@ -252,7 +252,7 @@ jobs:
 
           echo "Getting vmlinuz from image for secureboot verification"
           podman create --name "${IMAGE_NAME:?}-${IMAGE_TAG:?}" "${IMAGE_NAME:?}:${IMAGE_TAG:?}"
-          podman cp "${IMAGE_NAME:?}-${IMAGE_TAG:?}":'/usr/lib/modules/${KERNEL_VERSION:?}/vmlinuz' .
+          podman cp "${IMAGE_NAME:?}-${IMAGE_TAG:?}:/usr/lib/modules/${KERNEL_VERSION:?}/vmlinuz" .
           podman rm "${IMAGE_NAME:?}-${IMAGE_TAG:?}"
 
           echo "vmlinuz secureboot signature:"
