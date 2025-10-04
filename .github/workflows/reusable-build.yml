@@ -288,6 +288,13 @@ jobs:
           name: stream-info-${{ fromJson(inputs.architecture)[0] }}
           path: .
       - name: Set matrix environment variables
+        shell: bash
+        run: |
+          set -euxo pipefail
+          IMAGE_NAME='ucore${{ matrix.image_suffix }}'
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          cat stream-info.env >> $GITHUB_ENV
+      - name: Set matrix environment variables
         uses: *metadata_action
         id: meta
         with: *metadata
