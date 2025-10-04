@@ -331,7 +331,7 @@ jobs:
           sudo parallel --xapply \
             curl -fsSL https://github.com/{2}/{1}-static/releases/latest/download/{1}{3}-${IMAGE_ARCH}.tar.gz \
               '|' tar --strip-component {4} -xzf - -C {5} \
-            ::: podman buildah ::: mgoltzsche HeavenVolkoff ::: -linux '' ::: 1 0 ::: /usr/local/bin /
+            ::: podman buildah ::: mgoltzsche HeavenVolkoff ::: -linux '' ::: 1 0 ::: / /usr/local/bin/
 
           # Workaround issues between custom podman installation and apparmor
           sudo sed -Ei \
@@ -348,7 +348,7 @@ jobs:
           IMAGE_TAGS=()
 
           for IMAGE in ucore-*.tar; do
-              IMAGE_ARCH="${IMAGE#images/ucore-}"
+              IMAGE_ARCH="${IMAGE#ucore-}"
               IMAGE_ARCH="${IMAGE_ARCH%.tar}"
               IMAGE_TAGS+=("$IMAGE_ARCH")
 
