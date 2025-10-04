@@ -353,7 +353,8 @@ jobs:
           echo
           echo "Creating manifest for $IMAGE_NAME"
           buildah manifest create --annotation="$(
-            echo '${{ steps.meta.outputs.labels }}' | head -c -1 | tr '\n' ','
+            echo '${{ steps.meta.outputs.labels }}' | \
+              head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
           )" "${IMAGE_NAME:?}:latest"
 
           for IMAGE_TAG in "${IMAGE_TAGS[@]}"; do
