@@ -104,7 +104,7 @@ jobs:
           retention-days: 1
 
   build_ucore:
-    name: ucore ${{ matrix.architecture }}
+    name: ucore${{ matrix.image_suffix }} ${{ matrix.architecture }}
     runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
@@ -255,7 +255,7 @@ jobs:
           key: ucore${{ matrix.image_suffix }}-${{ matrix.architecture }}-${{ hashFiles('ucore/**/*') }}
 
   push_and_sign:
-    name: Push multi-arch manifest
+    name: Push and sign multi-arch ucore${{ matrix.image_suffix }} ${{ matrix.architecture }}
     runs-on: ubuntu-latest
     needs: [build_ucore]
     permissions:
