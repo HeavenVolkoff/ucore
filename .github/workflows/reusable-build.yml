@@ -335,7 +335,7 @@ jobs:
 
           # Workaround issues between custom podman installation and apparmor
           sudo sed -Ei \
-            's!^profile podman /usr/bin/podman !profile podman /usr/{bin,local/bin}/podman !' 
+            's!^profile podman /usr/bin/podman !profile podman /usr/{bin,local/bin}/podman !' \
             /etc/apparmor.d/podman
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Create multi-arch manifest
