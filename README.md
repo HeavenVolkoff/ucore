@@ -23,7 +23,6 @@ Please take a look at the included modifications, and help us improve uCore if t
   - [CoreOS and ostree Docs](#coreos-and-ostree-docs)
   - [Podman](#podman)
     - [Immutability and Podman](#immutability-and-podman)
-    - [Docker/Moby and Podman](#dockermoby-and-podman)
     - [Podman and FirewallD](#podman-and-firewalld)
     - [Automatically start containers on boot](#automatically-start-containers-on-boot)
   - [Default Services](#default-services)
@@ -65,7 +64,6 @@ Suitable for running containerized workloads on either bare metal or virtual mac
   - [cockpit](https://cockpit-project.org) (podman container and system management)
   - [firewalld](https://firewalld.org/)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`))
-  - [docker-buildx](https://github.com/docker/buildx) and [docker-compose](https://github.com/docker/compose) (versions matched to moby release) _docker(moby-engine) is pre-installed in CoreOS_
   - [podman-compose](https://github.com/containers/podman-compose) _podman is pre-installed in CoreOS_
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
@@ -192,15 +190,7 @@ It's a good idea to become familar with the [Fedora CoreOS Documentation](https:
 
 A CoreOS root filesystem system is immutable at runtime, and it is not recommended to install packages like in a mutable "normal" distribution.
 
-Fedora CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is also installed for those who desire docker instead of podman.
-
-#### Docker/Moby and Podman
-
-> [!IMPORTANT]
->
-> CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time. Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
->
-> Only run both simultaneously if you understand the risk.
+Fedora CoreOS expects the user to run services using [podman](https://podman.io).
 
 #### Podman and FirewallD
 
@@ -248,7 +238,7 @@ sudo systemctl enable podman-restart.service
 
 To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
 
-To activate pre-installed services (`cockpit`, `docker`, `tailscaled`, etc):
+To activate pre-installed services (`cockpit`, `tailscaled`, etc):
 
 ```bash
 sudo systemctl enable --now SERVICENAME.service
