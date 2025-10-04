@@ -330,7 +330,7 @@ jobs:
           curl -fsSL https://github.com/HeavenVolkoff/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH:?}.tar.gz \
             | tar -xzf - -C /usr/local/bin/
 
-          # Workaround issues between custom buuldah installation and apparmor
+          # Workaround issues between custom buildah installation and apparmor
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - id: create_manifest
         name: Create multi-arch manifest
