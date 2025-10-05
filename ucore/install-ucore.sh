@@ -7,13 +7,16 @@ export IMAGE_NAME=ucore
 /ctx/packages.sh
 
 # cockpit plugin for ZFS management
-curl --fail --retry 15 --retry-all-errors -sSL -o /tmp/cockpit-zfs-manager-api.json \
-    "https://api.github.com/repos/45Drives/cockpit-zfs-manager/releases/latest"
-CZM_TGZ_URL=$(jq -r .tarball_url /tmp/cockpit-zfs-manager-api.json)
-curl --fail --retry 15 --retry-all-errors -sSL -o /tmp/cockpit-zfs-manager.tar.gz "${CZM_TGZ_URL}"
+CZM_TGZ_URL="$(
+    curl --fail --retry 15 --retry-all-errors -sSL \
+        "https://api.github.com/repos/45Drives/cockpit-zfs-manager/releases/latest" |
+        jq -r .tarball_url
+)"
 
 mkdir -p /tmp/cockpit-zfs-manager
-tar -zxvf /tmp/cockpit-zfs-manager.tar.gz -C /tmp/cockpit-zfs-manager --strip-components=1
+curl --fail --retry 15 --retry-all-errors -sSL "${CZM_TGZ_URL}" |
+    tar -zxvf - -C /tmp/cockpit-zfs-manager --strip-components=1
+
 mv /tmp/cockpit-zfs-manager/polkit-1/actions/* /usr/share/polkit-1/actions/
 mv /tmp/cockpit-zfs-manager/polkit-1/rules.d/* /usr/share/polkit-1/rules.d/
 mv /tmp/cockpit-zfs-manager/zfs /usr/share/cockpit
@@ -29,15 +32,15 @@ mkdir -p /usr/local/bin
 
 # Install starship prompt
 curl --fail --retry 15 --retry-all-errors -sSL \
-    "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-musl.tar.gz" \
-    | tar -xzf - -C /usr/local/bin starship
+    "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-musl.tar.gz" |
+    tar -xzf - -C /usr/local/bin starship
 chmod +x /usr/local/bin/starship
 
 # Install xdg-ninja
 mkdir -p /tmp/xdg-ninja
 curl --fail --retry 15 --retry-all-errors -sSL \
-    https://github.com/b3nj5m1n/xdg-ninja/archive/refs/heads/main.tar.gz \
-    | tar -xzf - --strip-components 1 -C /tmp/xdg-ninja
+    https://github.com/b3nj5m1n/xdg-ninja/archive/refs/heads/main.tar.gz |
+    tar -xzf - --strip-components 1 -C /tmp/xdg-ninja
 
 pushd /tmp/xdg-ninja
 
