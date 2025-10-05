@@ -2,7 +2,9 @@
     "x86_64": {
         "include": {
             "all": [],
-            "ucore-minimal": ["intel-compute-runtime"]
+            "ucore-minimal": [
+                "intel-compute-runtime"
+            ]
         }
     },
     "all": {
@@ -16,19 +18,18 @@
                 "cockpit-system",
                 "firewalld",
                 "fwupd-efi",
+                "kitty-terminfo",
+                "lm_sensors",
+                "micro",
                 "open-vm-tools",
                 "podman",
                 "podman-compose",
                 "pv",
                 "qemu-guest-agent",
                 "tailscale",
-                "tmux",
                 "wireguard-tools"
             ],
             "ucore": [
-                "NetworkManager-wifi",
-                "atheros-firmware",
-                "brcmfmac-firmware",
                 "btop",
                 "cockpit-storaged",
                 "distrobox",
@@ -37,23 +38,15 @@
                 "glibc-langpack-pt",
                 "glow",
                 "hdparm",
-                "iwlegacy-firmware",
-                "iwlwifi-dvm-firmware",
-                "iwlwifi-mvm-firmware",
-                "kitty-terminfo",
                 "man-db",
-                "mt7xxx-firmware",
                 "nfs-utils",
-                "nxpwireless-firmware",
                 "pciutils",
                 "pcp-zeroconf",
                 "rclone",
-                "realtek-firmware",
                 "samba",
                 "samba-usershares",
                 "sanoid",
                 "smartctl",
-                "tiwilink-firmware",
                 "tuned",
                 "tuned-profiles-atomic",
                 "tuned-utils",
@@ -62,9 +55,19 @@
                 "xdg-user-dirs"
             ],
             "ucore-hci": [
+                "NetworkManager-wifi",
+                "atheros-firmware",
+                "brcmfmac-firmware",
                 "cockpit-machines",
+                "iwlegacy-firmware",
+                "iwlwifi-dvm-firmware",
+                "iwlwifi-mvm-firmware",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
+                "mt7xxx-firmware",
+                "nxpwireless-firmware",
+                "realtek-firmware",
+                "tiwilink-firmware",
                 "ublue-os-libvirt-workarounds",
                 "virt-install"
             ]
