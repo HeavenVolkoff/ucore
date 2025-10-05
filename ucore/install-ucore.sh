@@ -25,6 +25,12 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 
 rm -rf /tmp/cockpit-zfs-manager*
 
+# Install starship prompt
+curl --fail --retry 15 --retry-all-errors -sSL \
+    "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-musl.tar.gz" \
+    | tar -xzf - -C /usr/local/bin starship
+chmod +x /usr/local/bin/starship
+
 # disable tuned service by default
 systemctl disable tuned.service
 

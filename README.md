@@ -140,7 +140,7 @@ There are varying methods of installation for bare metal, cloud providers, and v
 These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by running the following command:
 
 ```bash
-cosign verify --key https://github.com/HeavenVolkoff/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
+cosign verify --key https://github.com/HeavenVolkoff/ucore/raw/main/cosign.pub ghcr.io/heavenvolkoff/IMAGE:TAG
 ```
 
 ### Auto-Rebase Install
@@ -167,7 +167,7 @@ To rebase an existing CoreOS machine to the latest uCore:
 1. After rebooting, you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
 
 ```bash
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/heavenvolkoff/IMAGE:TAG
 ```
 
 #### Verified Image Updates <!-- omit in toc -->
@@ -175,7 +175,7 @@ sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 The `ucore*` images include container policies to support image verification for improved trust of upgrades. Once running one of the `ucore*` images, the following command will rebase to the verified image reference:
 
 ```bash
-sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/IMAGE:TAG
+sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/heavenvolkoff/IMAGE:TAG
 ```
 
 ## Tips and Tricks
