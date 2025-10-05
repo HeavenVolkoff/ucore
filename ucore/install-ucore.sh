@@ -25,6 +25,8 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 
 rm -rf /tmp/cockpit-zfs-manager*
 
+mkdir -p /usr/local/bin
+
 # Install starship prompt
 curl --fail --retry 15 --retry-all-errors -sSL \
     "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-musl.tar.gz" \

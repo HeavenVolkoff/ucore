@@ -12,6 +12,9 @@ QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kerne
 
 #### PREPARE
 
+# Don't install weak dependencies
+echo 'install_weak_deps=False' >> /etc/dnf/dnf.conf
+
 # enable ublue-os repos
 dnf -y install dnf5-plugins
 dnf -y copr enable ublue-os/packages
