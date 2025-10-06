@@ -15,7 +15,7 @@ CZM_TGZ_URL="$(
 
 mkdir -p /tmp/cockpit-zfs-manager
 curl --fail --retry 15 --retry-all-errors -sSL "${CZM_TGZ_URL}" |
-    tar -zxvf - -C /tmp/cockpit-zfs-manager --strip-components=1
+    tar -zxf - -C /tmp/cockpit-zfs-manager --strip-components=1
 
 mv /tmp/cockpit-zfs-manager/polkit-1/actions/* /usr/share/polkit-1/actions/
 mv /tmp/cockpit-zfs-manager/polkit-1/rules.d/* /usr/share/polkit-1/rules.d/
@@ -27,6 +27,13 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 /tmp/cockpit-zfs-manager-font-fix.sh
 
 rm -rf /tmp/cockpit-zfs-manager*
+
+# Install cockpit-file-sharing from latest github release
+dnf -y install "$(
+    curl --fail --retry 15 --retry-all-errors -sSL \
+    'https://api.github.com/repos/45Drives/cockpit-file-sharing/releases/latest' |
+        jq -r '.assets[] | select((.name | startswith("cockpit-file-sharing")) and (.name | endswith(".el9.noarch.rpm"))) | .browser_download_url'
+)"
 
 # Install starship prompt
 curl --fail --retry 15 --retry-all-errors -sSL \

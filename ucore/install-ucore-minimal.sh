@@ -69,6 +69,12 @@ curl --fail --retry 15 --retry-all-errors -sSL https://pkgs.tailscale.com/stable
 export IMAGE_NAME=ucore-minimal
 /ctx/packages.sh
 
+# Install cockpit-sensors from latest github release
+mkdir -p /usr/share/cockpit/sensors
+curl --fail --retry 15 --retry-all-errors -sSL \
+    "https://github.com/ocristopfer/cockpit-sensors/releases/latest/download/cockpit-sensors.tar.xz" \
+    | tar -xJ --strip-components 2 -C /usr/share/cockpit/sensors cockpit-sensors/dist
+
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
 sed -i 's|^VARIANT_ID=.*|VARIANT_ID=ucore|' /usr/lib/os-release

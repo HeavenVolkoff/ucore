@@ -32,7 +32,6 @@
             ],
             "ucore": [
                 "btop",
-                "cockpit-file-sharing",
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
