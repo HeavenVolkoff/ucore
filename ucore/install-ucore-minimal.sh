@@ -33,9 +33,9 @@ install_weak_deps=False
 EOF
 
 log "Enabling ublue-os repos"
-dnf -qy install dnf5-plugins
-dnf -qy copr enable ublue-os/packages
-dnf -qy copr enable ublue-os/ucore
+dnf install dnf5-plugins
+dnf copr enable ublue-os/packages
+dnf copr enable ublue-os/ucore
 
 # ALWAYS: disable cisco-open264 repo
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
@@ -49,8 +49,8 @@ log "List of RPMs in /tmp/rpms/:"
 )
 
 log "Installing ucore addons and signing key"
-dnf -qy install /tmp/rpms/akmods-common/ublue-os-ucore-addons*.rpm
-dnf -qy install ublue-os-signing
+dnf install /tmp/rpms/akmods-common/ublue-os-ucore-addons*.rpm
+dnf install ublue-os-signing
 
 # Put the policy file in the correct place and cleanup /usr/etc
 cp /usr/etc/containers/policy.json /etc/containers/policy.json
@@ -71,7 +71,7 @@ else
         fi
     done
     log "Install kernel version ${KERNEL_VERSION} from kernel-cache."
-    dnf -qy install \
+    dnf install \
         /tmp/rpms/kernel/kernel-[0-9]*.rpm \
         /tmp/rpms/kernel/kernel-core-*.rpm \
         /tmp/rpms/kernel/kernel-modules-*.rpm
@@ -79,7 +79,7 @@ fi
 
 ## ALWAYS: install ZFS (and sanoid deps)
 log "Installing ZFS"
-dnf -qy install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
+dnf install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
 
 log "Generate modules.dep and map files"
 # for some reason depmod ran automatically with zfs 2.1 but not with 2.2

@@ -21,7 +21,7 @@ mapfile -t INCLUDED_PACKAGES < <(
 
 # remove any excluded packages which are present on image before install
 if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
-    dnf -qy remove \
+    dnf remove \
         "${EXCLUDED_PACKAGES[@]}"
 else
     echo "No packages to remove."
@@ -29,7 +29,7 @@ fi
 
 # Install Packages
 if [[ "${#INCLUDED_PACKAGES[@]}" -gt 0 ]]; then
-    dnf -qy install \
+    dnf install \
         "${INCLUDED_PACKAGES[@]}"
 else
     echo "No packages to install."
@@ -42,7 +42,7 @@ fi
 
 # remove any excluded packages which are still present on image
 if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
-    dnf -qy remove \
+    dnf remove \
         "${EXCLUDED_PACKAGES[@]}"
 else
     echo "No packages to remove."

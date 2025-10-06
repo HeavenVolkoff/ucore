@@ -33,7 +33,7 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 rm -rf /tmp/cockpit-zfs-manager*
 
 log "Installing cockpit-file-sharing from latest github release"
-dnf -qy install "$(
+dnf install "$(
     curl --fail --retry 15 --retry-all-errors -sSL \
         'https://api.github.com/repos/45Drives/cockpit-file-sharing/releases/latest' |
         jq -r '.assets[] | select((.name | startswith("cockpit-file-sharing")) and (.name | endswith(".el9.noarch.rpm"))) | .browser_download_url'
