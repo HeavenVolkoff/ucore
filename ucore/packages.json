@@ -12,6 +12,7 @@
             "all": [],
             "ucore-minimal": [
                 "bootc",
+                "cockpit-navigator",
                 "cockpit-networkmanager",
                 "cockpit-podman",
                 "cockpit-selinux",
@@ -31,6 +32,7 @@
             ],
             "ucore": [
                 "btop",
+                "cockpit-file-sharing",
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
@@ -55,21 +57,28 @@
                 "xdg-user-dirs"
             ],
             "ucore-hci": [
-                "NetworkManager-wifi",
-                "atheros-firmware",
-                "brcmfmac-firmware",
                 "cockpit-machines",
-                "iwlegacy-firmware",
-                "iwlwifi-dvm-firmware",
-                "iwlwifi-mvm-firmware",
-                "libvirt-client",
-                "libvirt-daemon-kvm",
-                "mt7xxx-firmware",
-                "nxpwireless-firmware",
-                "realtek-firmware",
-                "tiwilink-firmware",
+                "libvirt-daemon-driver-interface",
+                "libvirt-daemon-driver-nwfilter",
+                "libvirt-daemon-driver-secret",
+                "libvirt-daemon-driver-storage-disk",
+                "libvirt-daemon-driver-storage-logical",
+                "libvirt-daemon-driver-storage-zfs",
+                "libvirt-daemon-plugin-lockd",
+                "libvirt-ssh-proxy",
+                "qemu-block-curl",
+                "qemu-device-display-virtio-gpu-ccw",
+                "qemu-device-display-virtio-gpu-pci-rutabaga",
+                "qemu-device-display-virtio-gpu-rutabaga",
+                "qemu-device-display-virtio-vga-gl",
+                "qemu-device-display-virtio-vga-rutabaga",
+                "qemu-device-usb-host",
+                "qemu-device-usb-redirect",
+                "qemu-device-usb-smartcard",
+                "qemu-ui-curses",
+                "qemu-ui-egl-headless",
                 "ublue-os-libvirt-workarounds",
-                "virt-install"
+                "virtiofsd"
             ]
         },
         "exclude": {
