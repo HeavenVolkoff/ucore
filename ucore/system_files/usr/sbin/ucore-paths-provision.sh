@@ -9,7 +9,7 @@
 CONFIG=/etc/systemd/ucore-paths-provision.conf
 
 grep -v '^ *#' "$CONFIG" | while IFS= read -r MODE_PATH; do
-    IFS=";" read -r -a MP <<< "$MODE_PATH"
+    IFS=";" read -r -a MP <<<"$MODE_PATH"
     if [ ! -d "${MP[1]}" ]; then
         # shellcheck disable=SC2174
         mkdir -p -m "${MP[0]}" "${MP[1]}"

@@ -21,7 +21,7 @@ echo "QUALIFIED_KERNEL: ${QUALIFIED_KERNEL}"
 #### PREPARE
 
 # ALWAYS: disable instalation of weak dependencies
-echo 'install_weak_deps=False' >> /etc/dnf/dnf.conf
+echo 'install_weak_deps=False' >>/etc/dnf/dnf.conf
 
 echo "Enabling ublue-os repos"
 dnf -qy install dnf5-plugins
@@ -83,8 +83,8 @@ echo "Installing regular packages for ${IMAGE_NAME}"
 echo "Installing cockpit-sensors from latest github release"
 mkdir -p /usr/share/cockpit/sensors
 curl --fail --retry 15 --retry-all-errors -sSL \
-    "https://github.com/ocristopfer/cockpit-sensors/releases/latest/download/cockpit-sensors.tar.xz" \
-    | tar -xJf- --strip-components 2 -C /usr/share/cockpit/sensors cockpit-sensors/dist
+    "https://github.com/ocristopfer/cockpit-sensors/releases/latest/download/cockpit-sensors.tar.xz" |
+    tar -xJf- --strip-components 2 -C /usr/share/cockpit/sensors cockpit-sensors/dist
 
 echo "Tweak os-release"
 sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
