@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-. log.sh
+. /ctx/log.sh
 
 # install packages.json stuffs
 export IMAGE_NAME=ucore-hci

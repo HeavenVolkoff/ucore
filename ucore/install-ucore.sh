@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-. log.sh
+. /ctx/log.sh
 
 ARCH="$(rpm -E '%{_arch}')"
 
