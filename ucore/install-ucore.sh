@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-set -ouex pipefail
+set -oue pipefail
 
-# install packages.json stuffs
 export IMAGE_NAME=ucore
+echo "Installing regular packages for ${IMAGE_NAME}"
 /ctx/packages.sh
 
-# cockpit plugin for ZFS management
+echo "Installing cockpit-zfs-manager from latest github release"
 CZM_TGZ_URL="$(
     curl --fail --retry 15 --retry-all-errors -sSL \
         "https://api.github.com/repos/45Drives/cockpit-zfs-manager/releases/latest" |
@@ -15,7 +15,7 @@ CZM_TGZ_URL="$(
 
 mkdir -p /tmp/cockpit-zfs-manager
 curl --fail --retry 15 --retry-all-errors -sSL "${CZM_TGZ_URL}" |
-    tar -zxf - -C /tmp/cockpit-zfs-manager --strip-components=1
+    tar -xzf - -C /tmp/cockpit-zfs-manager --strip-components=1
 
 mv /tmp/cockpit-zfs-manager/polkit-1/actions/* /usr/share/polkit-1/actions/
 mv /tmp/cockpit-zfs-manager/polkit-1/rules.d/* /usr/share/polkit-1/rules.d/
@@ -28,20 +28,20 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 
 rm -rf /tmp/cockpit-zfs-manager*
 
-# Install cockpit-file-sharing from latest github release
-dnf -y install "$(
+echo "Installing cockpit-file-sharing from latest github release"
+dnf -qy install "$(
     curl --fail --retry 15 --retry-all-errors -sSL \
     'https://api.github.com/repos/45Drives/cockpit-file-sharing/releases/latest' |
         jq -r '.assets[] | select((.name | startswith("cockpit-file-sharing")) and (.name | endswith(".el9.noarch.rpm"))) | .browser_download_url'
 )"
 
-# Install starship prompt
+echo "Installing starship prompt"
 curl --fail --retry 15 --retry-all-errors -sSL \
     "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-musl.tar.gz" |
     tar -xzf - -C /usr/bin starship
 chmod +x /usr/bin/starship
 
-# Install xdg-ninja
+echo "Installing xdg-ninja from latest github main branch"
 mkdir -p /tmp/xdg-ninja
 curl --fail --retry 15 --retry-all-errors -sSL \
     https://github.com/b3nj5m1n/xdg-ninja/archive/refs/heads/main.tar.gz |
@@ -58,8 +58,8 @@ install -Dm 0644 -t '/usr/share/man/man1/' man/xdg-ninja.1
 popd
 rm -rf /tmp/xdg-ninja
 
-# disable tuned service by default
+echo "Disable tuned service by default"
 systemctl disable tuned.service
 
-# tweak os-release
+echo "Tweak os-release"
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
