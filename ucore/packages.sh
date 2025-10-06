@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-set -ouex pipefail
+set -euo pipefail
 
-ARCH="$(uname -m)"
+ARCH="$(rpm -E '%{_arch}')"
 
 # build list of all packages requested for exclusion
 mapfile -t EXCLUDED_PACKAGES < <(

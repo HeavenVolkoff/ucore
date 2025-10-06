@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 
-set -ouex pipefail
+set -euo pipefail
+
+. log.sh
 
 ## ALWAYS: regular post-install
+
+log "Disable services"
 systemctl disable coreos-oci-migration-motd.service
 systemctl disable zincati.service
 
+log "Enable services"
 systemctl enable gssproxy-workaround.service
 systemctl enable swtpm-workaround.service
 
