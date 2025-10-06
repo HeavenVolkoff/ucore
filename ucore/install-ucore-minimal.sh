@@ -80,8 +80,10 @@ fi
 ## ALWAYS: install ZFS (and sanoid deps)
 log "Installing ZFS"
 dnf -qy install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
+
+log "Generate modules.dep and map files"
 # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
-depmod -a -v "${KERNEL_VERSION}"
+depmod -a "${KERNEL_VERSION}"
 
 ## ALWAYS: install regular packages
 
