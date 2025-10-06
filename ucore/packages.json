@@ -4,6 +4,9 @@
             "all": [],
             "ucore-minimal": [
                 "intel-compute-runtime"
+            ],
+            "ucore-hci": [
+                "libvirt-daemon-driver-storage-zfs"
             ]
         }
     },
@@ -62,7 +65,6 @@
                 "libvirt-daemon-driver-secret",
                 "libvirt-daemon-driver-storage-disk",
                 "libvirt-daemon-driver-storage-logical",
-                "libvirt-daemon-driver-storage-zfs",
                 "libvirt-daemon-plugin-lockd",
                 "libvirt-ssh-proxy",
                 "qemu-block-curl",
