@@ -28,6 +28,7 @@
                 "open-vm-tools",
                 "podman",
                 "podman-compose",
+                "policycoreutils-python-utils",
                 "pv",
                 "qemu-guest-agent",
                 "tailscale",
