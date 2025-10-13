@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
 name: build-ucore
 
 on:
@@ -112,8 +114,8 @@ jobs:
           retention-days: 1
 
   build_ucore:
+    if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && !cancelled()
     name: ucore${{ matrix.image_suffix }} ${{ matrix.architecture }}
-    if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     permissions:
@@ -126,12 +128,9 @@ jobs:
       fail-fast: false
       matrix:
         image_suffix: &image_suffix
-        # - "-minimal"
           - ""
           - "-hci"
         include: &include
-        # - image_suffix: "-minimal"
-        #   description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
             description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
           - image_suffix: "-hci"
@@ -148,18 +147,18 @@ jobs:
           path: &cache_path ucore-${{ matrix.architecture }}.tar
           lookup-only: true
       - name: Download stream info artifact
-        if: always() && !steps.restore.outputs.cache-hit
+        if: &no_cache "!steps.restore.outputs.cache-hit"
         uses: &download actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: stream-info-${{ matrix.architecture }}
           path: .
       - name: Set matrix environment variables
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         run: &matrix_envvars |
           echo 'IMAGE_NAME=ucore${{ matrix.image_suffix }}' >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
       - name: Pull base and kmod images
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         uses: *wretry
         with:
           attempt_limit: 3
@@ -171,7 +170,7 @@ jobs:
             podman pull "ghcr.io/ublue-os/akmods:${KERNEL_FLAVOR:?}-${FEDORA_VERSION:?}"
             podman pull "ghcr.io/ublue-os/akmods-zfs:${KERNEL_FLAVOR:?}-${FEDORA_VERSION:?}"
       - name: Verify versions (image, kernel, zfs)
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         run: |
           set -euo pipefail
 
@@ -204,7 +203,7 @@ jobs:
             exit 1
           fi
       - id: meta
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         name: Gather image metadata
         uses: &metadata_action docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         with: &metadata
@@ -217,7 +216,7 @@ jobs:
             org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
       - id: build_image
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         name: Build image
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
         with:
@@ -237,7 +236,7 @@ jobs:
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
       - name: Check secureboot and export
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         env:
           IMAGE_TAG: ${{ matrix.architecture }}
           IMAGE_ARCH: ${{ matrix.architecture }}
@@ -271,13 +270,14 @@ jobs:
           echo "Exporting image to tarball"
           buildah push "${IMAGE_NAME:?}:${IMAGE_TAG:?}" "docker-archive:ucore-${IMAGE_ARCH:?}.tar"
       - name: Cache image artifact
-        if: always() && !steps.restore.outputs.cache-hit
+        if: *no_cache
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           key: *cache_key
           path: *cache_path
 
   push_and_sign:
+    if: needs.workflow_info.result == 'success' && needs.build_ucore.result == 'success' && !cancelled()
     name: Push and sign multi-arch ucore${{ matrix.image_suffix }} ${{ matrix.architecture }}
     runs-on: ubuntu-latest
     needs: [workflow_info, build_ucore]
@@ -400,7 +400,7 @@ jobs:
               echo "${TAG:?}"
               buildah tag "${IMAGE_NAME:?}:latest" "${IMAGE_NAME:?}:${TAG:?}"
             done
-            
+
             if [[ "${COREOS_VERSION:?}" == "stable" ]]; then
               echo "latest"
               BUILD_TAGS+=("latest")
